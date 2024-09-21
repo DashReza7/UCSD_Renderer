@@ -109,7 +109,6 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
         }
         else if (command == "trinormal")
         {
-            // TODO:
             throw std::runtime_error("trinormal not implemented yet!");
         }
         else if (command == "translate")

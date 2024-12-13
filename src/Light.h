@@ -1,12 +1,14 @@
 #pragma once
 
 #include "util/VecMath.h"
+#include <numbers>
 
 class Light
 {
 public:
     vec3 color;
     
+    // TODO: remove this.
     virtual float calc_attenuation(vec3 pos) const = 0;
 };
 
@@ -54,5 +56,44 @@ public:
     {
         float distance = norm(obj_posn - position);
         return 1.0f / (atten[0] + atten[1] * distance + atten[2] * distance * distance);
+    }
+};
+
+class AreaLight : public Light
+{
+public:
+    vec3 a;
+    vec3 b;
+    vec3 c;
+    vec3 d;
+    
+    AreaLight() {}
+    AreaLight(vec3 color, vec3 a, vec3 b, vec3 c, vec3 d) : a(a), b(b), c(c), d(d)
+    {
+        this->color = color;
+    }
+    
+    float calc_attenuation(vec3 obj_posn) const override
+    {
+        return 1.0f;
+    }
+    
+    vec3 calculate_radiance(const HitRecord &rec, const vec3 &hitpoint_diffuse) const
+    {
+        float theta1 = acos(dot(normalize(a - rec.hit_pos), normalize(b - rec.hit_pos)));
+        float theta2 = acos(dot(normalize(b - rec.hit_pos), normalize(d - rec.hit_pos)));
+        float theta3 = acos(dot(normalize(d - rec.hit_pos), normalize(c - rec.hit_pos)));
+        float theta4 = acos(dot(normalize(c - rec.hit_pos), normalize(a - rec.hit_pos)));
+        vec3 gamma1 = cross(a - rec.hit_pos, b - rec.hit_pos);
+        gamma1 = normalize(gamma1);
+        vec3 gamma2 = cross(b - rec.hit_pos, d - rec.hit_pos);
+        gamma2 = normalize(gamma2);
+        vec3 gamma3 = cross(d - rec.hit_pos, c - rec.hit_pos);
+        gamma3 = normalize(gamma3);
+        vec3 gamma4 = cross(c - rec.hit_pos, a - rec.hit_pos);
+        gamma4 = normalize(gamma4);
+        
+        vec3 phi = (gamma1 * theta1 + gamma2 * theta2 + gamma3 * theta3 + gamma4 * theta4) / 2.0f;
+        return hitpoint_diffuse / std::numbers::pi * color * dot(phi, rec.normal);
     }
 };

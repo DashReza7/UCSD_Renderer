@@ -3,6 +3,7 @@
 #include <random>
 #include "Scene.h"
 #include "Film.h"
+#include "Light.h"
 
 class Renderer
 {
@@ -15,7 +16,34 @@ private:
     bool use_aliasing;
     uint32_t SPP;
     
-    vec3 get_pixel_color(const Ray &r, uint32_t depth) const
+    // analytic direct light Integrator
+    vec3 get_pixel_color_analyticDirect(const Ray &r) const
+    {
+        HitRecord rec;
+        bool is_hit = scene->bvh->hit(r, T_MIN, T_MAX, rec);
+        if (!is_hit)
+        {
+            return vec3{0.0f, 0.0f, 0.0f};
+        }
+        else
+        {
+            vec3 color = vec3{0.0f, 0.0f, 0.0f};
+            
+            auto hit_shape = (Shape *) rec.hit_obj;
+            
+//            color += hit_shape->mat.ambient;
+//            color += hit_shape->mat.emission;
+            
+            for (AreaLight al : scene->areaLights)
+                color += al.calculate_radiance(rec, hit_shape->mat.diffuse);
+            
+            color.clamp(0.0f, 1.0f);
+            return color;
+        }
+    }
+    
+    // ray tracer Integrator
+    vec3 get_pixel_color_raytrace(const Ray &r, uint32_t depth) const
     {
         if (depth == 0)
             return vec3{0.0f, 0.0f, 0.0f};
@@ -77,13 +105,22 @@ private:
             vec3 reflected_dirn = reflect(r.direction * -1, rec.normal);
             Ray reflected_ray = Ray{rec.hit_pos + rec.normal * EPS, reflected_dirn};
             if (hit_shape->mat.specular != vec3{0.0f, 0.0f, 0.0f})
-                color += hit_shape->mat.specular * get_pixel_color(reflected_ray, depth - 1);
+                color += hit_shape->mat.specular * get_pixel_color_raytrace(reflected_ray, depth - 1);
             
             color.clamp(0.0f, 1.0f);
             return color;
         }
     }
-
+    
+    vec3 get_pixel_color(const Ray &r, uint32_t depth) const
+    {
+        if (scene->integrator == "raytracer")
+            return get_pixel_color_raytrace(r, depth);
+        else if (scene->integrator == "analyticdirect")
+            return get_pixel_color_analyticDirect(r);
+        return vec3{};
+    }
+    
 public:
     Renderer(Scene *s, Film *f, bool use_aliasing = false, uint32_t SPP = 10)
     {

@@ -23,6 +23,8 @@ public:
     DirnLight dirn_light{};
     std::vector<PointLight> pointlights{};
     BVHNode* bvh;
+    std::string integrator;
+    std::vector<AreaLight> areaLights{};
     
     Scene () = default;
     

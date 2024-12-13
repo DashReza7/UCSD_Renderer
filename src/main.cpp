@@ -4,13 +4,12 @@
 #include "Scene.h"
 #include "Renderer.h"
 
+#define ARCHIVE_IMAGES true
 
 void run(int argc, char *argv[])
 {
     if (argc < 2)
         throw std::runtime_error("no source scene files provided");
-    
-    bool archive_images = true;
     
     double total_render_time = 0.0;
     for (int i = 1; i < argc; ++i)
@@ -33,15 +32,15 @@ void run(int argc, char *argv[])
         total_render_time += duration;
         std::cout << input_filename << " -> " << output_filename << "  duration: " << duration / 1000.0f << " seconds" << std::endl;
         
-        film.write_to_file_png(output_filename.c_str());
+        film.write_to_file_png(("../ResultImages/" + output_filename).c_str());
         
         main_scene.terminate();
     }
     std::cout << "\ntotal render time: " << total_render_time / 1000.0 << std::endl << std::endl;
     
-    if (archive_images)
+    if (ARCHIVE_IMAGES)
     {
-        const char* command = "powershell.exe -ExecutionPolicy Bypass -File C:/Users/masou/CLionProjects/Rendering_HW1/cmake-build-debug/compress_images.ps1";
+        const char* command = "powershell.exe -ExecutionPolicy Bypass -File C:/Users/masou/CLionProjects/Rendering_HWs_UCSD/libs/compress_images.ps1";
         int result = system(command);
         
         if (result != 0)

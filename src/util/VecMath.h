@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <format>
+#include <cmath>
 
 const float EPS = 1e-4f;
 

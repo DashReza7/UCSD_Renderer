@@ -23,6 +23,7 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
     std::vector<vec3> vertexes;
     int vertnormal_idx = 0;
     std::vector<std::pair<vec3, vec3>> vertnormals;
+    // TODO: Should I make this zero or not?
     vec3 ambient = vec3{0.2f, 0.2f, 0.2f};
     vec3 diffuse = vec3{0.0f, 0.0f, 0.0f};
     vec3 specular = vec3{0.0f, 0.0f, 0.0f};
@@ -30,6 +31,7 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
     vec3 emission = vec3{0.0f, 0.0f, 0.0f};
     // allow only one directional light
     bool is_dirn_light_set = false;
+    this->integrator = "raytracer";
     
     // keep track of transformations
     mat4 cur_transform = mat4{1.0f};
@@ -125,6 +127,7 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
                 angle -= 360.0f;
             while (angle <= -360.0f)
                 angle += 360.0f;
+            
             cur_transform = cur_transform * get_rotation_matrix(axis, radians(angle));
             cur_inv_transform = get_rotation_matrix(axis, radians(-angle)) * cur_inv_transform;
         }
@@ -202,6 +205,29 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
             emission.x = std::stof(tokens[1]);
             emission.y = std::stof(tokens[2]);
             emission.z = std::stof(tokens[3]);
+        }
+        else if (command == "integrator")
+        {
+            this->integrator = tokens[1];
+        }
+        else if (command == "quadLight")
+        {
+            vec4 a_temp = vec4{std::stof(tokens[1]), std::stof(tokens[2]), std::stof(tokens[3]), 1.0f};
+            vec4 b_temp = vec4{std::stof(tokens[4]) + a_temp.x, std::stof(tokens[5]) + a_temp.y, std::stof(tokens[6]) + a_temp.z, 1.0f};
+            vec4 c_temp = vec4{std::stof(tokens[7]) + a_temp.x, std::stof(tokens[8]) + a_temp.y, std::stof(tokens[9]) + a_temp.z, 1.0f};
+            vec4 d_temp = vec4{ -a_temp.x + b_temp.x + c_temp.x,  -a_temp.y + b_temp.y + c_temp.y, -a_temp.z + b_temp.z + c_temp.z, 1.0f};
+            a_temp = cur_transform * a_temp;
+            b_temp = cur_transform * b_temp;
+            c_temp = cur_transform * c_temp;
+            d_temp = cur_transform * d_temp;
+            vec3 a = vec3{a_temp.x / a_temp.w, a_temp.y / a_temp.w, a_temp.z / a_temp.w};
+            vec3 b = vec3{b_temp.x / b_temp.w, b_temp.y / b_temp.w, b_temp.z / b_temp.w};
+            vec3 c = vec3{c_temp.x / c_temp.w, c_temp.y / c_temp.w, c_temp.z / c_temp.w};
+            vec3 d = vec3{d_temp.x / d_temp.w, d_temp.y / d_temp.w, d_temp.z / d_temp.w};
+            
+            areaLights.emplace_back(vec3{std::stof(tokens[10]), std::stof(tokens[11]), std::stof(tokens[12])}, a, b, c, d);
+            triangles.emplace_back(a, b,d,Material{diffuse, specular, shininess, ambient, emission});
+            triangles.emplace_back(a, d,c,Material{diffuse, specular, shininess, ambient, emission});
         }
         else
             throw std::runtime_error(std::format("Invalid command: {}", command));

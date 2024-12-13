@@ -81,20 +81,43 @@ mat4 get_translation_matrix(const vec3 &direction)
 // TODO: change this to a more numerically stable method
 mat4 get_rotation_matrix(const vec3 &axis, float angle)
 {
-    vec3 axis_normalized = normalize(axis);
-    float cos_angle = cos(angle);
-    float one_minus_cos_angle = 1.0f - cos_angle;
-    float sin_angle = sin(angle);
-    return mat4{vec4{cos_angle + one_minus_cos_angle * axis_normalized.x * axis_normalized.x,
-                     one_minus_cos_angle * axis_normalized.x * axis_normalized.y + sin_angle * axis_normalized.z,
-                     one_minus_cos_angle * axis_normalized.x * axis_normalized.z - sin_angle * axis_normalized.y, 0.0f},
-                vec4{one_minus_cos_angle * axis_normalized.x * axis_normalized.y - sin_angle * axis_normalized.z,
-                     cos_angle + one_minus_cos_angle * axis_normalized.y * axis_normalized.y,
-                     one_minus_cos_angle * axis_normalized.y * axis_normalized.z + sin_angle * axis_normalized.x, 0.0f},
-                vec4{one_minus_cos_angle * axis_normalized.x * axis_normalized.z + sin_angle * axis_normalized.y,
-                     one_minus_cos_angle * axis_normalized.y * axis_normalized.z - sin_angle * axis_normalized.x,
-                     cos_angle + one_minus_cos_angle * axis_normalized.z * axis_normalized.z, 0.0f},
-                vec4{0.0f, 0.0f, 0.0f, 1.0f}};
+    vec3 v = normalize(axis);
+    
+    vec3 s{};
+    if (abs(v.x) <= abs(v.y) && abs(v.x) <= abs(v.z))
+        s = vec3{0.0f, -v.z, v.y};
+    else if (abs(v.y) <= abs(v.x) && abs(v.y) <= abs(v.z))
+        s = vec3{-v.z, 0.0f, v.x};
+    else if (abs(v.z) <= abs(v.x) && abs(v.z) <= abs(v.y))
+        s = vec3{-v.y, v.x, 0.0f};
+    vec3 t = cross(v, s);
+    mat4 M = mat4{
+        vec4{v, 0.0f},
+        vec4{s, 0.0f},
+        vec4{t, 0.0f},
+        vec4{0.0f, 0.0f, 0.0f, 1.0f}
+    };
+    mat4 R = mat4{
+        vec4{1.0f, 0.0f, 0.0f, 0.0f},
+        vec4{0.0f, cos(angle), sin(angle), 0.0f},
+        vec4{0.0f, -sin(angle), cos(angle), 0.0f},
+        vec4{0.0f, 0.0f, 0.0f, 1.0f}
+    };
+    return M * R * transpose(M);
+    
+//    float cos_angle = cos(angle);
+//    float one_minus_cos_angle = 1.0f - cos_angle;
+//    float sin_angle = sin(angle);
+//    return mat4{vec4{cos_angle + one_minus_cos_angle * v.x * v.x,
+//                     one_minus_cos_angle * v.x * v.y + sin_angle * v.z,
+//                     one_minus_cos_angle * v.x * v.z - sin_angle * v.y, 0.0f},
+//                vec4{one_minus_cos_angle * v.x * v.y - sin_angle * v.z,
+//                     cos_angle + one_minus_cos_angle * v.y * v.y,
+//                     one_minus_cos_angle * v.y * v.z + sin_angle * v.x, 0.0f},
+//                vec4{one_minus_cos_angle * v.x * v.z + sin_angle * v.y,
+//                     one_minus_cos_angle * v.y * v.z - sin_angle * v.x,
+//                     cos_angle + one_minus_cos_angle * v.z * v.z, 0.0f},
+//                vec4{0.0f, 0.0f, 0.0f, 1.0f}};
 }
 
 vec3 reflect(const vec3 &dir, const vec3 &normal)

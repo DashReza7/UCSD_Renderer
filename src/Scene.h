@@ -25,6 +25,8 @@ public:
     BVHNode* bvh;
     std::string integrator;
     std::vector<AreaLight> areaLights{};
+    uint32_t light_samples = 1;
+    bool light_stratify = false;
     
     Scene () = default;
     

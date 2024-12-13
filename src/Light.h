@@ -62,15 +62,21 @@ public:
 class AreaLight : public Light
 {
 public:
+    // vertices in order: abdc
     vec3 a;
     vec3 b;
     vec3 c;
     vec3 d;
+    float area;
+    vec3 normal;
     
     AreaLight() {}
     AreaLight(vec3 color, vec3 a, vec3 b, vec3 c, vec3 d) : a(a), b(b), c(c), d(d)
     {
         this->color = color;
+        area = triangle_area(a, b, d) + triangle_area(a, c, d);
+        normal = cross(b - a, c - a);
+        normal = normalize(normal);
     }
     
     float calc_attenuation(vec3 obj_posn) const override
@@ -78,7 +84,7 @@ public:
         return 1.0f;
     }
     
-    vec3 calculate_radiance(const HitRecord &rec, const vec3 &hitpoint_diffuse) const
+    vec3 calculate_analytic_radiance(const HitRecord &rec, const vec3 &hitpoint_diffuse) const
     {
         float theta1 = acos(dot(normalize(a - rec.hit_pos), normalize(b - rec.hit_pos)));
         float theta2 = acos(dot(normalize(b - rec.hit_pos), normalize(d - rec.hit_pos)));
@@ -95,5 +101,22 @@ public:
         
         vec3 phi = (gamma1 * theta1 + gamma2 * theta2 + gamma3 * theta3 + gamma4 * theta4) / 2.0f;
         return hitpoint_diffuse / std::numbers::pi * color * dot(phi, rec.normal);
+    }
+    
+    bool hit(const Ray &r, HitRecord &rec, vec3 &color)
+    {
+        color = this->color;
+        // TODO: maybe negate the normal?
+        float t = dot(a - r.origin, normal) / dot(r.direction, normal);
+        if (t < 0)
+            return false;
+        rec.t = t;
+        rec.hit_pos = r(t);
+        rec.normal = normal;
+        if (point_in_triangle(rec.hit_pos, a, b, d))
+            return true;
+        if (point_in_triangle(rec.hit_pos, a, c, d))
+            return true;
+        return false;
     }
 };

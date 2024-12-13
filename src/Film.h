@@ -17,9 +17,9 @@ public:
     
     void commit(uint32_t x, uint32_t y, vec3 color)
     {
-        auto r = static_cast<unsigned char>(color.x * 255.99f);
-        auto g = static_cast<unsigned char>(color.y * 255.99f);
-        auto b = static_cast<unsigned char>(color.z * 255.99f);
+        auto r = static_cast<unsigned char>(color.x * 255.0f);
+        auto g = static_cast<unsigned char>(color.y * 255.0f);
+        auto b = static_cast<unsigned char>(color.z * 255.0f);
         
         pixels[(y * width + x) * 3 + 0] = r;
         pixels[(y * width + x) * 3 + 1] = g;

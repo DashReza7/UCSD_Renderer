@@ -8,7 +8,8 @@ add_executable(UCSD_Renderer
         src/main.cpp
         src/util/VecMath.cpp
         src/Shape.cpp
-        src/Scene.cpp)
+        src/Scene.cpp
+        src/Renderer.cpp)
 
 include_directories(libs/FreeImage)
 

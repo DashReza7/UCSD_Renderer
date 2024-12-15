@@ -206,6 +206,13 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
             emission.y = std::stof(tokens[2]);
             emission.z = std::stof(tokens[3]);
         }
+        else if (command == "use_bvh")
+        {
+            if (tokens[1] == "true")
+                this->use_bvh = true;
+            else if (tokens[1] == "false")
+                this->use_bvh = false;
+        }
         else if (command == "integrator")
         {
             this->integrator = tokens[1];
@@ -226,8 +233,6 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
             vec3 d = vec3{d_temp.x / d_temp.w, d_temp.y / d_temp.w, d_temp.z / d_temp.w};
             
             areaLights.emplace_back(vec3{std::stof(tokens[10]), std::stof(tokens[11]), std::stof(tokens[12])}, a, b, c, d);
-//            triangles.emplace_back(a, b,d,Material{diffuse, specular, shininess, ambient, emission});
-//            triangles.emplace_back(a, d,c,Material{diffuse, specular, shininess, ambient, emission});
         }
         else if (command == "lightsamples")
         {
@@ -239,6 +244,24 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
                 this->light_stratify = true;
             else if (tokens[1] == "off")
                 this->light_stratify = false;
+        }
+        else if (command == "spp")
+        {
+            this->spp = std::stoi(tokens[1]);
+        }
+        else if (command == "nexteventestimation")
+        {
+            if (tokens[1] == "on")
+                this->next_event_estimation = true;
+            else if (tokens[1] == "off")
+                this->next_event_estimation = false;
+        }
+        else if (command == "russianroulette")
+        {
+            if (tokens[1] == "on")
+                this->russian_roulette = true;
+            else if (tokens[1] == "off")
+                this->russian_roulette = false;
         }
         else
             throw std::runtime_error(std::format("Invalid command: {}", command));

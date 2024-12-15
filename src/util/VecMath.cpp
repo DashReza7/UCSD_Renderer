@@ -133,3 +133,34 @@ bool point_in_triangle(vec3 p, vec3 v1, vec3 v2, vec3 v3)
            dot(n, cross(v1 - v3, p - v3)) >= 0.0f;
 }
 
+vec3 get_random_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis)
+{
+    // in the range [0, pi]
+//    float phi = std::numbers::pi * uniform_dis(generator);
+    float phi = std::acos(uniform_dis(generator));
+    // in the range [0, 2*pi]
+    float theta = 2.0f * std::numbers::pi * uniform_dis(generator);
+    
+    return vec3{std::sin(phi) * std::cos(theta), std::sin(phi) * std::sin(theta), std::cos(phi)};
+}
+
+vec3 get_random_unit_vector_around_normal(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal)
+{
+//    return normalize(normal + get_random_unit_vector(generator, uniform_dis));
+    
+    vec3 rnd_vec = get_random_unit_vector(generator, uniform_dis);
+    rnd_vec.z = std::abs(rnd_vec.z);
+    
+    vec3 r = normalize(normal);
+    vec3 s{};
+    if (std::abs(r.x) <= std::abs(r.y) && std::abs(r.x) <= std::abs(r.z))
+        s = vec3{0.0f, r.z * -1, r.y};
+    else if (std::abs(r.y) <= std::abs(r.x) && std::abs(r.y) <= std::abs(r.z))
+        s = vec3{r.z * -1, 0.0f, r.x};
+    else if (std::abs(r.z) <= std::abs(r.x) && std::abs(r.z) <= std::abs(r.y))
+        s = vec3{r.y * -1, r.x, 0.0f};
+    s = normalize(s);
+    vec3 t = normalize(cross(r, s));
+
+    return normalize(s * rnd_vec.x + t * rnd_vec.y + r * rnd_vec.z);
+}

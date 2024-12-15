@@ -3,6 +3,8 @@
 #include <iostream>
 #include <format>
 #include <cmath>
+#include <random>
+#include <numbers>
 
 const float EPS = 1e-4f;
 
@@ -372,8 +374,6 @@ public:
     }
 };
 
-
-
 float norm2(const vec2& v);
 float norm2(const vec3& v);
 
@@ -402,3 +402,7 @@ mat4 get_rotation_matrix(const vec3& axis, float angle);
 vec3 reflect(const vec3& dir, const vec3& normal);
 
 bool point_in_triangle(vec3 p, vec3 v1, vec3 v2, vec3 v3);
+
+vec3 get_random_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis);
+
+vec3 get_random_unit_vector_around_normal(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal);

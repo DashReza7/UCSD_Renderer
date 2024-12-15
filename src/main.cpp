@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdio.h>
 #include <chrono>
 #include <cstdlib>
 #include "Scene.h"
@@ -23,7 +24,7 @@ void run(int argc, char *argv[])
         
         Film film{main_scene.width, main_scene.height};
         
-        Renderer renderer{&main_scene, &film, false, 10};
+        Renderer renderer{&main_scene, &film};
         
         std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
         renderer.render();
@@ -50,6 +51,18 @@ void run(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+//    std::random_device rd;
+//    std::mt19937 gen = std::mt19937(rd());
+//    std::uniform_real_distribution<float> uniform_dis{0.0f, 1.0f};
+//    vec3 normal{0.0f, 1.0f, 0.0f};
+//    vec3 foo{};
+//    int x = 50000;
+//    for (int i = 0; i < x; ++i)
+//        foo += get_random_unit_vector_around_normal(gen, uniform_dis, normal);
+//    foo = foo / (float)x;
+//    printf("(%f, %f, %f)\n", foo.x, foo.y, foo.z);
+//    exit(85);
+    
     try
     {
         run(argc, argv);
@@ -59,6 +72,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-    std::cout << "\nshutting down..." << std::endl;
+    std::cout << "\nPress Enter to close the console...";
+    std::cin.get();
     return 0;
 }

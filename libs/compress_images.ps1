@@ -1,15 +1,13 @@
 # Define the list of files to compress
 $filesToCompress = @(
-    "../ResultImages/analytic.png",
-    "../ResultImages/direct9.png",
-    "../ResultImages/direct3x3.png",
-    "../ResultImages/sphere.png",
-    "../ResultImages/cornell.png",
-    "../ResultImages/dragon.png"
+    "../ResultImages/cornellSimple.png",
+    "../ResultImages/cornellNEE.png"
+#     "../ResultImages/cornellRR.png",
+#     "../ResultImages/dragon.png"
 )
 
 # Define the output ZIP file path
-$outputZipFile = "../ResultImages/homework2.zip"
+$outputZipFile = "../ResultImages/homework3a.zip"
 
 # Filter out non-existent files
 $availableFiles = @()

@@ -23,10 +23,14 @@ public:
     DirnLight dirn_light{};
     std::vector<PointLight> pointlights{};
     BVHNode* bvh;
+    bool use_bvh = true;
     std::string integrator;
     std::vector<AreaLight> areaLights{};
     uint32_t light_samples = 1;
     bool light_stratify = false;
+    uint32_t spp = 1;
+    bool next_event_estimation = false;
+    bool russian_roulette = false;
     
     Scene () = default;
     

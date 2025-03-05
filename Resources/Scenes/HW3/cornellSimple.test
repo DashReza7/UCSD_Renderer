@@ -7,8 +7,6 @@ output cornellSimple.png
 
 maxdepth 5
 
-use_bvh false
-
 maxverts 12
 #planar face
 vertex -1 +1 0

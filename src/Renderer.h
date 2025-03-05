@@ -33,6 +33,10 @@ private:
     // handle which Integrator to use
     vec3 get_pixel_color(const Ray &r, uint32_t depth);
 
+    void render_parallel();
+
+    void render_sequential();
+
 public:
     Renderer(Scene *s, Film *f)
     {
@@ -41,5 +45,11 @@ public:
         gen = std::mt19937(rd());
     }
     
-    void render();
+    void render()
+    {
+        if (scene->parallel_run)
+            render_parallel();
+        else
+            render_sequential();
+    }
 };

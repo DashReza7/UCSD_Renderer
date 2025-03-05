@@ -1,9 +1,36 @@
+#include <tbb/tbb.h>
 #include <random>
 #include "Scene.h"
 #include "Light.h"
 #include "Renderer.h"
 
-void Renderer::render()
+void Renderer::render_parallel()
+{
+    std::atomic<int> render_progress = 0;
+    tbb::parallel_for(0, static_cast<int>(scene->height), [&](int i)
+    {
+        for (uint32_t j = 0; j < scene->width; ++j)
+        {
+            vec3 pixel_color = vec3{0.0f, 0.0f, 0.0f};
+            for (int k = 0; k < scene->spp; ++k)
+            {
+                float offset1 = k == 0 ? 0.5f : uniform_dis(gen);
+                float offset2 = k == 0 ? 0.5f : uniform_dis(gen);
+                float u = (static_cast<float>(j) + offset1) / static_cast<float>(scene->width);
+                float v = (static_cast<float>(i) + offset2) / static_cast<float>(scene->height);
+                pixel_color += get_pixel_color(scene->main_camera->get_ray(u, v), scene->maxdepth);
+            }
+            pixel_color = pixel_color / static_cast<float>(scene->spp);
+            pixel_color.clamp(0.0f, 1.0f);
+            film->commit(j, i, pixel_color);
+        }
+        render_progress.fetch_add(1, std::memory_order_relaxed);
+        std::cout << std::format("Progress: {:.2f}%\r", (float) render_progress / (float) scene->height * 100.0f);
+    });
+    std::cout << "Progress: 100.0%" << std::endl;
+}
+
+void Renderer::render_sequential()
 {
     for (uint32_t i = 0; i < scene->height; ++i)
     {

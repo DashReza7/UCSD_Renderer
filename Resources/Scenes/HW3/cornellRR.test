@@ -9,7 +9,6 @@ output cornellRR.png
 
 maxdepth -1
 
-
 maxverts 12
 #planar face
 vertex -1 +1 0

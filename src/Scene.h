@@ -31,6 +31,7 @@ public:
     uint32_t spp = 1;
     bool next_event_estimation = false;
     bool russian_roulette = false;
+    bool parallel_run = false;
     
     Scene () = default;
     

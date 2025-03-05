@@ -4,6 +4,8 @@ project(UCSD_Renderer)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+find_package(TBB REQUIRED)
+
 add_executable(UCSD_Renderer
         src/main.cpp
         src/util/VecMath.cpp
@@ -11,13 +13,7 @@ add_executable(UCSD_Renderer
         src/Scene.cpp
         src/Renderer.cpp)
 
-include_directories(libs/FreeImage)
+target_include_directories(UCSD_Renderer PRIVATE C:/MyPC/Libs/FreeImage)
 
-target_link_libraries(UCSD_Renderer
-        ${CMAKE_SOURCE_DIR}/libs/FreeImage/FreeImage.lib)
-
-add_custom_command(TARGET UCSD_Renderer POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${PROJECT_SOURCE_DIR}/libs/FreeImage/FreeImage.dll"
-        $<TARGET_FILE_DIR:UCSD_Renderer>)
-
+target_link_libraries(UCSD_Renderer PRIVATE C:/MyPC/libs/FreeImage/FreeImage.lib)
+target_link_libraries(UCSD_Renderer PUBLIC TBB::tbb)

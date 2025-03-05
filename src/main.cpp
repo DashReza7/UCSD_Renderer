@@ -1,11 +1,10 @@
 #include <iostream>
-#include <stdio.h>
 #include <chrono>
 #include <cstdlib>
 #include "Scene.h"
 #include "Renderer.h"
 
-#define ARCHIVE_IMAGES true
+#define ARCHIVE_IMAGES false
 
 void run(int argc, char *argv[])
 {
@@ -41,7 +40,7 @@ void run(int argc, char *argv[])
     
     if (ARCHIVE_IMAGES)
     {
-        const char* command = "powershell.exe -ExecutionPolicy Bypass -File C:/Users/masou/CLionProjects/Rendering_HWs_UCSD/libs/compress_images.ps1";
+        const char* command = "powershell.exe -ExecutionPolicy Bypass -File C:/Users/masou/Desktop/Codes/UCSD_Renderer/libs/compress_images.ps1";
         int result = system(command);
         
         if (result != 0)
@@ -51,18 +50,6 @@ void run(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-//    std::random_device rd;
-//    std::mt19937 gen = std::mt19937(rd());
-//    std::uniform_real_distribution<float> uniform_dis{0.0f, 1.0f};
-//    vec3 normal{0.0f, 1.0f, 0.0f};
-//    vec3 foo{};
-//    int x = 50000;
-//    for (int i = 0; i < x; ++i)
-//        foo += get_random_unit_vector_around_normal(gen, uniform_dis, normal);
-//    foo = foo / (float)x;
-//    printf("(%f, %f, %f)\n", foo.x, foo.y, foo.z);
-//    exit(85);
-    
     try
     {
         run(argc, argv);

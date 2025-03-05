@@ -263,6 +263,12 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
             else if (tokens[1] == "off")
                 this->russian_roulette = false;
         }
+        else if (command == "parallel_run") {
+            if (tokens[1] == "true")
+                this->parallel_run = true;
+            else if (tokens[1] == "false")
+                this->parallel_run = false;
+        }
         else
             throw std::runtime_error(std::format("Invalid command: {}", command));
     }

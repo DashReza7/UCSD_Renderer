@@ -2,7 +2,6 @@
 
 #include <random>
 #include "Scene.h"
-#include "Light.h"
 
 class Renderer
 {
@@ -29,7 +28,7 @@ private:
     
     // Path tracer with Next Event Estimation
     vec3 get_pixel_color_pathtrace_NEE(const Ray &r, uint32_t depth);
-    
+
     // handle which Integrator to use
     vec3 get_pixel_color(const Ray &r, uint32_t depth);
 

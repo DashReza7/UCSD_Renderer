@@ -32,6 +32,7 @@ public:
     bool next_event_estimation = false;
     bool russian_roulette = false;
     bool parallel_run = false;
+    std::string importance_sampling_type = "hemisphere";
     
     Scene () = default;
     

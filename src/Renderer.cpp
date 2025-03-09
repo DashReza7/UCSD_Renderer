@@ -322,67 +322,68 @@ vec3 Renderer::get_pixel_color_pathtrace_NEE(const Ray &r, uint32_t depth) {
         }
     }
     if ((hit_area_light && !is_hit) || (hit_area_light && t_area_light < rec.t)) {
-        if (depth == scene->maxdepth)
+        if (!scene->next_event_estimation || depth == scene->maxdepth)
             return arealight_color;
         return vec3{};
     }
-
     if (is_hit) {
         auto hit_shape = (Shape *) rec.hit_obj;
 
-        // direct light
         vec3 color{};
         vec3 reflected_ray_dir = reflect(r.direction * -1, rec.normal);
-        for (AreaLight al: scene->areaLights) {
-            std::vector<vec3> rnd_light_points;
-            if (!scene->light_stratify)
-                for (int i = 0; i < scene->light_samples; ++i) {
-                    float rnd1 = uniform_dis(gen);
-                    float rnd2 = uniform_dis(gen);
-                    rnd_light_points.push_back(al.a + (al.b - al.a) * rnd1 + (al.c - al.a) * rnd2);
-                }
-            else {
-                int root_N = std::round(std::sqrt(scene->light_samples));
-                for (int i = 0; i < root_N; ++i)
-                    for (int j = 0; j < root_N; ++j) {
+
+        // direct light
+        if (scene->next_event_estimation)
+            for (AreaLight al: scene->areaLights) {
+                std::vector<vec3> rnd_light_points;
+                if (!scene->light_stratify)
+                    for (int i = 0; i < scene->light_samples; ++i) {
                         float rnd1 = uniform_dis(gen);
                         float rnd2 = uniform_dis(gen);
-                        rnd_light_points.push_back(al.a + (al.b - al.a) * i / root_N + (al.c - al.a) * j / root_N +
-                                                   (al.b - al.a) * rnd1 / root_N + (al.c - al.a) * rnd2 / root_N);
+                        rnd_light_points.push_back(al.a + (al.b - al.a) * rnd1 + (al.c - al.a) * rnd2);
                     }
+                else {
+                    int root_N = std::round(std::sqrt(scene->light_samples));
+                    for (int i = 0; i < root_N; ++i)
+                        for (int j = 0; j < root_N; ++j) {
+                            float rnd1 = uniform_dis(gen);
+                            float rnd2 = uniform_dis(gen);
+                            rnd_light_points.push_back(al.a + (al.b - al.a) * i / root_N + (al.c - al.a) * j / root_N +
+                                                       (al.b - al.a) * rnd1 / root_N + (al.c - al.a) * rnd2 / root_N);
+                        }
+                }
+
+                vec3 sum_value;
+                for (int i = 0; i < scene->light_samples; ++i) {
+                    vec3 rnd_light_pos = rnd_light_points[i];
+
+                    vec3 surface_to_light_vec = rnd_light_pos - rec.hit_pos;
+                    float light_dist = norm(surface_to_light_vec);
+                    surface_to_light_vec = normalize(surface_to_light_vec);
+
+                    float cos_theta_i = dot(rec.normal, surface_to_light_vec);
+                    cos_theta_i = std::clamp(cos_theta_i, 0.0f, 1.0f);
+                    float cos_theta_o = dot(surface_to_light_vec, al.normal);
+                    cos_theta_o = std::clamp(cos_theta_o, 0.0f, 1.0f);
+
+                    float geom_term =
+                            cos_theta_i * cos_theta_o / dot(rec.hit_pos - rnd_light_pos, rec.hit_pos - rnd_light_pos);
+
+                    HitRecord foo_rec;
+                    Ray shadow_ray{rec.hit_pos + rec.normal * EPS, surface_to_light_vec};
+                    is_hit = scene->use_bvh
+                                 ? scene->bvh->hit(shadow_ray, T_MIN, T_MAX, foo_rec)
+                                 : hit_brute_force(
+                                     shadow_ray, T_MIN, T_MAX, foo_rec);
+                    if (is_hit && foo_rec.t < light_dist)
+                        continue;
+                    sum_value += (hit_shape->mat.diffuse / std::numbers::pi +
+                                  hit_shape->mat.specular / (2 * std::numbers::pi) * (hit_shape->mat.shininess + 2) *
+                                  std::pow(dot(reflected_ray_dir, surface_to_light_vec), hit_shape->mat.shininess)) *
+                            geom_term;
+                }
+                color += sum_value * al.area / scene->light_samples * al.color;
             }
-
-            vec3 sum_value;
-            for (int i = 0; i < scene->light_samples; ++i) {
-                vec3 rnd_light_pos = rnd_light_points[i];
-
-                vec3 surface_to_light_vec = rnd_light_pos - rec.hit_pos;
-                float light_dist = norm(surface_to_light_vec);
-                surface_to_light_vec = normalize(surface_to_light_vec);
-
-                float cos_theta_i = dot(rec.normal, surface_to_light_vec);
-                cos_theta_i = std::clamp(cos_theta_i, 0.0f, 1.0f);
-                float cos_theta_o = dot(surface_to_light_vec, al.normal);
-                cos_theta_o = std::clamp(cos_theta_o, 0.0f, 1.0f);
-
-                float geom_term =
-                        cos_theta_i * cos_theta_o / dot(rec.hit_pos - rnd_light_pos, rec.hit_pos - rnd_light_pos);
-
-                HitRecord foo_rec;
-                Ray shadow_ray{rec.hit_pos + rec.normal * EPS, surface_to_light_vec};
-                is_hit = scene->use_bvh
-                             ? scene->bvh->hit(shadow_ray, T_MIN, T_MAX, foo_rec)
-                             : hit_brute_force(
-                                 shadow_ray, T_MIN, T_MAX, foo_rec);
-                if (is_hit && foo_rec.t < light_dist)
-                    continue;
-                sum_value += (hit_shape->mat.diffuse / std::numbers::pi +
-                              hit_shape->mat.specular / (2 * std::numbers::pi) * (hit_shape->mat.shininess + 2) *
-                              std::pow(dot(reflected_ray_dir, surface_to_light_vec), hit_shape->mat.shininess)) *
-                        geom_term;
-            }
-            color += sum_value * al.area / scene->light_samples * al.color;
-        }
 
         // indirect light
         Ray reflected_ray{
@@ -400,6 +401,7 @@ vec3 Renderer::get_pixel_color_pathtrace_NEE(const Ray &r, uint32_t depth) {
         return color;
     }
 
+
     return vec3{};
 }
 
@@ -411,12 +413,9 @@ vec3 Renderer::get_pixel_color(const Ray &r, uint32_t depth) {
         return get_pixel_color_analyticDirect(r);
     else if (scene->integrator == "direct")
         return get_pixel_color_direct(r);
-    else if (scene->integrator == "pathtracer" && !scene->next_event_estimation)
-        return get_pixel_color_pathtrace(r, depth);
-    else if (scene->integrator == "pathtracer" && scene->next_event_estimation) {
-        vec3 color = get_pixel_color_pathtrace_NEE(r, depth);
-        //        color.clamp(0.0f, 1.0f);
-        return color;
-    }
+    // else if (scene->integrator == "pathtracer" && !scene->next_event_estimation)
+    //     return get_pixel_color_pathtrace(r, depth);
+    else if (scene->integrator == "pathtracer")
+        return get_pixel_color_pathtrace_NEE(r, depth);
     return vec3{};
 }

@@ -258,51 +258,8 @@ vec3 Renderer::get_pixel_color_direct(const Ray &r) {
     return vec3{};
 }
 
-// Right Now just a simple path-tracer
+// Path-tracer
 vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth) {
-    if (depth == 0)
-        return vec3{};
-
-    HitRecord rec;
-    bool is_hit = scene->use_bvh ? scene->bvh->hit(r, T_MIN, T_MAX, rec) : hit_brute_force(r, T_MIN, T_MAX, rec);
-
-    // if hit area light before anything else, return the (clamped) color of the area light
-    bool hit_area_light = false;
-    float t_area_light = std::numeric_limits<float>::max();
-    vec3 arealight_color;
-    for (AreaLight al: scene->areaLights) {
-        HitRecord foo_rec;
-        vec3 foo_color;
-        if (al.hit(r, foo_rec, foo_color) == true && foo_rec.t < t_area_light) {
-            hit_area_light = true;
-            t_area_light = foo_rec.t;
-            arealight_color = foo_color;
-        }
-    }
-    if ((hit_area_light && !is_hit) || (hit_area_light && t_area_light < rec.t))
-        return arealight_color;
-
-    if (is_hit) {
-        auto hit_shape = (Shape *) rec.hit_obj;
-
-        Ray reflected_ray_diffuse{
-            rec.hit_pos + rec.normal * EPS,
-            get_random_unit_vector_around_normal(gen, uniform_dis, rec.normal)
-        };
-        vec3 color = get_pixel_color_pathtrace(reflected_ray_diffuse, depth - 1) *
-                     (hit_shape->mat.diffuse * 2.0f * dot(rec.normal, reflected_ray_diffuse.direction) +
-                      hit_shape->mat.specular * (hit_shape->mat.shininess + 2) *
-                      std::pow(dot(reflect(r.direction * -1, rec.normal), reflected_ray_diffuse.direction),
-                               hit_shape->mat.shininess));
-
-        return color;
-    }
-
-    return vec3{};
-}
-
-// Path tracer with Next Event Estimation
-vec3 Renderer::get_pixel_color_pathtrace_NEE(const Ray &r, uint32_t depth) {
     if (depth == 0)
         return vec3{};
 
@@ -413,9 +370,7 @@ vec3 Renderer::get_pixel_color(const Ray &r, uint32_t depth) {
         return get_pixel_color_analyticDirect(r);
     else if (scene->integrator == "direct")
         return get_pixel_color_direct(r);
-    // else if (scene->integrator == "pathtracer" && !scene->next_event_estimation)
-    //     return get_pixel_color_pathtrace(r, depth);
     else if (scene->integrator == "pathtracer")
-        return get_pixel_color_pathtrace_NEE(r, depth);
+        return get_pixel_color_pathtrace(r, depth);
     return vec3{};
 }

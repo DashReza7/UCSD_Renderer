@@ -4,7 +4,7 @@
 #include "Scene.h"
 #include "Renderer.h"
 
-#define ARCHIVE_IMAGES false
+#define ARCHIVE_IMAGES true
 
 void run(int argc, char *argv[])
 {

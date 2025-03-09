@@ -374,6 +374,12 @@ public:
     }
 };
 
+enum class vector_sampling_type {
+    UNIFORM_HEMISPHERE,
+    COSINE,
+    BRDF
+};
+
 float norm2(const vec2& v);
 float norm2(const vec3& v);
 
@@ -405,4 +411,7 @@ bool point_in_triangle(vec3 p, vec3 v1, vec3 v2, vec3 v3);
 
 vec3 get_random_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis);
 
-vec3 get_random_unit_vector_around_normal(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal);
+vec3 get_cosine_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis);
+
+vec3 get_vector_around_normal(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, vector_sampling_type type);
+

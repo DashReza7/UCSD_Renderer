@@ -249,9 +249,11 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
         }
         else if (command == "importancesampling") {
             if (tokens[1] == "hemisphere")
-                this->importance_sampling_type = "hemisphere";
+                this->importance_sampling_type = vector_sampling_type::UNIFORM_HEMISPHERE;
             else if (tokens[1] == "cosine")
-                this->importance_sampling_type = "cosine";
+                this->importance_sampling_type = vector_sampling_type::COSINE;
+            else if (tokens[1] == "brdf")
+                this->importance_sampling_type = vector_sampling_type::BRDF;
         }
         else
             throw std::runtime_error(std::format("Invalid command: {}", command));

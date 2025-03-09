@@ -347,12 +347,10 @@ vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 inco
         // indirect light
         Ray reflected_ray{
             rec.hit_pos + rec.normal * EPS,
-            get_random_unit_vector_around_normal(gen, uniform_dis, rec.normal)
+            get_vector_around_normal(gen, uniform_dis, rec.normal, scene->importance_sampling_type)
         };
-        vec3 throughput =
-            (hit_shape->mat.diffuse / std::numbers::pi +
-            hit_shape->mat.specular * (hit_shape->mat.shininess + 2) / (2 * std::numbers::pi) * std::pow(dot(reflected_ray_dir, reflected_ray.direction), hit_shape->mat.shininess)) *
-            (2 * std::numbers::pi / 1 /* 2pi / N */) * dot(rec.normal, reflected_ray.direction);
+        vec3 brdf = (hit_shape->mat.diffuse / std::numbers::pi + hit_shape->mat.specular * (hit_shape->mat.shininess + 2) / (2 * std::numbers::pi) * std::pow(dot(reflected_ray_dir, reflected_ray.direction), hit_shape->mat.shininess));
+        vec3 throughput = scene->importance_sampling_type == vector_sampling_type::UNIFORM_HEMISPHERE ? brdf * (2 * std::numbers::pi) * dot(rec.normal, reflected_ray.direction) : brdf * std::numbers::pi;
         incoming_throughput *= throughput;
         float termination_probability = scene->russian_roulette ?  1.0f - std::min(1.0f, std::max(incoming_throughput.x, std::max(incoming_throughput.y, incoming_throughput.z))) : 0.0f;
         if (!scene->russian_roulette || uniform_dis(gen) > termination_probability) {
@@ -361,7 +359,6 @@ vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 inco
         }
         return color;
     }
-
 
     return vec3{};
 }

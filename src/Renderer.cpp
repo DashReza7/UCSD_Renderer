@@ -72,7 +72,8 @@ vec3 Renderer::get_pixel_color_raytrace(const Ray &r, uint32_t depth) const {
     bool is_hit = scene->use_bvh ? scene->bvh->hit(r, T_MIN, T_MAX, rec) : hit_brute_force(r, T_MIN, T_MAX, rec);
     if (!is_hit) {
         return vec3{0.0f, 0.0f, 0.0f};
-    } else {
+    }
+    else {
         vec3 color = vec3{0.0f, 0.0f, 0.0f};
 
         auto hit_shape = (Shape *) rec.hit_obj;
@@ -158,7 +159,8 @@ vec3 Renderer::get_pixel_color_analyticDirect(const Ray &r) const {
 
     if (!is_hit) {
         return vec3{0.0f, 0.0f, 0.0f};
-    } else {
+    }
+    else {
         vec3 color = vec3{0.0f, 0.0f, 0.0f};
 
         auto hit_shape = (Shape *) rec.hit_obj;
@@ -259,7 +261,7 @@ vec3 Renderer::get_pixel_color_direct(const Ray &r) {
 }
 
 // Path-tracer
-vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth) {
+vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 incoming_throughput) {
     if (depth == 0)
         return vec3{};
 
@@ -347,14 +349,16 @@ vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth) {
             rec.hit_pos + rec.normal * EPS,
             get_random_unit_vector_around_normal(gen, uniform_dis, rec.normal)
         };
-        vec3 traced_color = get_pixel_color_pathtrace_NEE(reflected_ray, depth - 1);
-        color += traced_color * dot(rec.normal, reflected_ray.direction) * (hit_shape->mat.diffuse * 2.0f +
-                                                                            hit_shape->mat.specular *
-                                                                            (hit_shape->mat.shininess + 2) * std::pow(
-                                                                                dot(reflected_ray_dir,
-                                                                                    reflected_ray.direction),
-                                                                                hit_shape->mat.shininess));
-
+        vec3 throughput =
+            (hit_shape->mat.diffuse / std::numbers::pi +
+            hit_shape->mat.specular * (hit_shape->mat.shininess + 2) / (2 * std::numbers::pi) * std::pow(dot(reflected_ray_dir, reflected_ray.direction), hit_shape->mat.shininess)) *
+            (2 * std::numbers::pi / 1 /* 2pi / N */) * dot(rec.normal, reflected_ray.direction);
+        incoming_throughput *= throughput;
+        float termination_probability = scene->russian_roulette ?  1.0f - std::min(1.0f, std::max(incoming_throughput.x, std::max(incoming_throughput.y, incoming_throughput.z))) : 0.0f;
+        if (!scene->russian_roulette || uniform_dis(gen) > termination_probability) {
+            vec3 traced_color = get_pixel_color_pathtrace(reflected_ray, depth - 1, incoming_throughput / (1 - termination_probability));
+            color += traced_color * throughput / (1 - termination_probability);
+        }
         return color;
     }
 

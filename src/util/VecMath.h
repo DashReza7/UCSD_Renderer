@@ -413,5 +413,7 @@ vec3 get_random_unit_vector(std::mt19937 &generator, std::uniform_real_distribut
 
 vec3 get_cosine_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis);
 
-vec3 get_vector_around_normal(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, vector_sampling_type type);
+vec3 get_vector_around_normal(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, vector_sampling_type type, bool specular_brdf, float shininess);
+
+vec3 get_brdf_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, bool specular_brdf, float shinineess);
 

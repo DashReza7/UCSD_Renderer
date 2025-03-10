@@ -140,10 +140,18 @@ vec3 get_cosine_unit_vector(std::mt19937 &generator, std::uniform_real_distribut
     return normalize(vec3{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)});
 }
 
-vec3 get_vector_around_normal(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, vector_sampling_type type) {
+vec3 get_brdf_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, bool specular_brdf, float shininess) {
+    float phi = 2.0f * std::numbers::pi * uniform_dis(generator);
+    float theta = specular_brdf ? std::acos(std::pow(uniform_dis(generator), 1.0f / (shininess + 1.0f))) : std::acos(std::sqrt(uniform_dis(generator)));
+    return normalize(vec3{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)});
+}
+
+vec3 get_vector_around_normal(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, vector_sampling_type type, bool specular_brdf, float shininess) {
     vec3 rnd_vec = type == vector_sampling_type::UNIFORM_HEMISPHERE
                        ? get_random_unit_vector(generator, uniform_dis)
-                       : get_cosine_unit_vector(generator, uniform_dis);
+                       : type == vector_sampling_type::COSINE ? get_cosine_unit_vector(generator, uniform_dis) : get_brdf_unit_vector(generator, uniform_dis, specular_brdf, shininess);
+    if (type == vector_sampling_type::BRDF && rnd_vec.z < 0.0f)
+        return vec3{};
     rnd_vec.z = std::abs(rnd_vec.z);
 
     vec3 r = normalize(normal);

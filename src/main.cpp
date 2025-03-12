@@ -4,7 +4,7 @@
 #include "Scene.h"
 #include "Renderer.h"
 
-#define ARCHIVE_IMAGES true
+#define ARCHIVE_IMAGES false
 
 void run(int argc, char *argv[])
 {
@@ -21,7 +21,7 @@ void run(int argc, char *argv[])
         
         main_scene.init();
         
-        Film film{main_scene.width, main_scene.height};
+        Film film{main_scene.width, main_scene.height, main_scene.gamma};
         
         Renderer renderer{&main_scene, &film};
         

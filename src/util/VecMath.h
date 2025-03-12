@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <format>
-#include <cmath>
 #include <random>
 #include <numbers>
 
@@ -417,3 +416,6 @@ vec3 get_vector_around_normal(std::mt19937 &generator, std::uniform_real_distrib
 
 vec3 get_brdf_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, bool specular_brdf, float shinineess);
 
+vec3 get_brdf_unit_ggx(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, bool specular_brdf, float roughness, const vec3 &wo);
+
+vec3 align_vector(const vec3 &vector, const vec3 &center);

@@ -26,7 +26,7 @@ private:
     // Path-tracer
     vec3 get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 incoming_throughput = vec3{1.0f, 1.0f, 1.0f});
 
-    vec3 get_pixel_color_brdf_tmp(const Ray &r, uint32_t depth, vec3 incoming_throughput = vec3{1.0f, 1.0f, 1.0f});
+    vec3 get_pixel_color_ggx(const Ray &r, uint32_t depth, vec3 incoming_throughput = vec3{1.0f, 1.0f, 1.0f});
 
     // handle which Integrator to use
     vec3 get_pixel_color(const Ray &r, uint32_t depth);

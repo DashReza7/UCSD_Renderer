@@ -1,20 +1,28 @@
 #pragma once
 
-#include <algorithm>
 #include "util/VecMath.h"
 #include "SpatialDatastructures.h"
+
+enum class BRDF_TYPE
+{
+    Phong,
+    GGX
+};
 
 class Material
 {
 public:
+    BRDF_TYPE brdf_type = BRDF_TYPE::Phong;
     vec3 diffuse;
     vec3 specular;
     float shininess;
     vec3 ambient;
     vec3 emission;
+    float roughness;
     
     Material() = default;
-    Material(const vec3& diffuse, const vec3& specular, float shininess, const vec3& ambient, const vec3& emission) : diffuse(diffuse), specular(specular), shininess(shininess), ambient(ambient), emission(emission) {}
+    Material(const BRDF_TYPE brdf_type, const vec3& diffuse, const vec3& specular, float shininess, const vec3& ambient, const vec3& emission, const float roughness) :
+             brdf_type(brdf_type), diffuse(diffuse), specular(specular), shininess(shininess), ambient(ambient), emission(emission), roughness(roughness) {}
 };
 
 class Shape : public Hittable

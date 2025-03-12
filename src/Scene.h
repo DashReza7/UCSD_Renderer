@@ -33,6 +33,7 @@ public:
     bool russian_roulette = false;
     bool parallel_run = false;
     vector_sampling_type importance_sampling_type = vector_sampling_type::UNIFORM_HEMISPHERE;
+    float gamma = 1.0f;
     
     Scene () = default;
     

@@ -8,18 +8,19 @@ class Film
 private:
     uint32_t width, height;
     std::vector<unsigned char> pixels{};
-    
+    float gamma_inv;
+
 public:
-    Film(uint32_t w, uint32_t h) : width(w), height(h)
+    Film(uint32_t w, uint32_t h, float gamma) : width(w), height(h), gamma_inv(1.0f / gamma)
     {
         pixels = std::vector<unsigned char>(width * height * 3);
     }
     
     void commit(uint32_t x, uint32_t y, vec3 color)
     {
-        auto r = static_cast<unsigned char>(color.x * 255.0f);
-        auto g = static_cast<unsigned char>(color.y * 255.0f);
-        auto b = static_cast<unsigned char>(color.z * 255.0f);
+        auto r = static_cast<unsigned char>(std::pow(color.x, this->gamma_inv) * 255.0f);
+        auto g = static_cast<unsigned char>(std::pow(color.y, this->gamma_inv) * 255.0f);
+        auto b = static_cast<unsigned char>(std::pow(color.z, this->gamma_inv) * 255.0f);
         
         pixels[(y * width + x) * 3 + 0] = r;
         pixels[(y * width + x) * 3 + 1] = g;

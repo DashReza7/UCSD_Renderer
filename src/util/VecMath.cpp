@@ -154,7 +154,12 @@ vec3 get_vector_around_normal(std::mt19937 &generator, std::uniform_real_distrib
         return vec3{};
     rnd_vec.z = std::abs(rnd_vec.z);
 
-    vec3 r = normalize(normal);
+    return align_vector(rnd_vec, normal);
+}
+
+vec3 align_vector(const vec3 &vector, const vec3 &center)
+{
+    vec3 r = normalize(center);
     vec3 s{};
     if (std::abs(r.x) <= std::abs(r.y) && std::abs(r.x) <= std::abs(r.z))
         s = vec3{0.0f, r.z * -1, r.y};
@@ -165,5 +170,29 @@ vec3 get_vector_around_normal(std::mt19937 &generator, std::uniform_real_distrib
     s = normalize(s);
     vec3 t = normalize(cross(r, s));
 
-    return normalize(s * rnd_vec.x + t * rnd_vec.y + r * rnd_vec.z);
+    return normalize(s * vector.x + t * vector.y + r * vector.z);
 }
+
+vec3 get_brdf_unit_ggx(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, bool specular_brdf, float roughness, const vec3 &wo)
+{
+    if (specular_brdf)
+    {
+        float phi = 2.0f * std::numbers::pi_v<float> * uniform_dis(generator);
+        float rnd = uniform_dis(generator);
+        float theta = std::atan(roughness * std::sqrt(rnd) / std::sqrt(1.0f - rnd));
+        vec3 h{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
+        vec3 h_rotated = align_vector(h, normal);
+        vec3 wi = reflect(wo, h_rotated);
+        if (dot(wi, normal) < 0.0f)
+            return vec3{};
+        return wi;
+    }
+    else
+    {
+        float phi = 2 * std::numbers::pi_v<float> * uniform_dis(generator);
+        float theta = std::acos(std::sqrt(uniform_dis(generator)));
+        vec3 sample{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
+        return align_vector(sample, normal);
+    }
+}
+

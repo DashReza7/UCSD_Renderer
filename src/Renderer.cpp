@@ -525,10 +525,33 @@ vec3 Renderer::get_pixel_color_ggx(const Ray &r, uint32_t depth, vec3 incoming_t
                                  shadow_ray, T_MIN, T_MAX, foo_rec);
                 if (is_hit && foo_rec.t < light_dist)
                     continue;
-                sum_value += (hit_shape->mat.diffuse / std::numbers::pi +
-                              hit_shape->mat.specular / (2 * std::numbers::pi) * (hit_shape->mat.shininess + 2) *
-                              std::pow(dot(reflected_ray_dir, surface_to_light_vec), hit_shape->mat.shininess)) *
-                        geom_term;
+                vec3 brdf{};
+                if (hit_shape->mat.brdf_type == BRDF_TYPE::Phong)
+                {
+                    brdf = hit_shape->mat.diffuse / std::numbers::pi + hit_shape->mat.specular / (2 * std::numbers::pi) * (hit_shape->mat.shininess + 2) * std::pow(dot(reflected_ray_dir, surface_to_light_vec), hit_shape->mat.shininess);
+                }
+                else if (hit_shape->mat.brdf_type == BRDF_TYPE::GGX)
+                {
+                    vec3 half_vector = normalize(surface_to_light_vec - r.direction);
+                    float tan_sqrd_h = dot(rec.normal, half_vector) != 0.0f ? 1.0f / (std::pow(dot(rec.normal, half_vector), 2)) - 1.0f : 1000.0f;
+                    float alpha_sqrd = std::pow(hit_shape->mat.roughness, 2);
+                    float mic_dis_func = 0.0f;
+                    if (dot(rec.normal, half_vector) <= EPS || alpha_sqrd + tan_sqrd_h <= EPS)
+                        mic_dis_func = 1.0f;
+                    else
+                        mic_dis_func = alpha_sqrd / (std::numbers::pi_v<float> * std::pow(dot(rec.normal, half_vector), 4) * (std::pow(alpha_sqrd + tan_sqrd_h, 2)));
+                    float tan_sqrd_wi = dot(rec.normal, surface_to_light_vec) != 0 ? 1.0f / std::pow(dot(rec.normal, surface_to_light_vec), 2) - 1.0f : 1000.0f;
+                    float tan_sqrd_wo = dot(rec.normal, r.direction * -1.0f) != 0 ? 1.0f / std::pow(dot(rec.normal, r.direction * -1.0f), 2) - 1.0f : 1000.0f;
+                    float smith_g_func = (2.0f / (1.0f + std::sqrt(1.0f + alpha_sqrd * tan_sqrd_wi))) * (2.0f / (1.0f + std::sqrt(1.0f + alpha_sqrd * tan_sqrd_wo)));
+                    vec3 fresnel_term = hit_shape->mat.specular + (vec3{1.0f, 1.0f, 1.0f} - hit_shape->mat.specular) * std::pow(1 - dot(surface_to_light_vec, half_vector), 5);
+                    vec3 brdf_specular{};
+                    if (std::abs(dot(r.direction * -1.0f, rec.normal)) <= EPS || std::abs(dot(surface_to_light_vec, rec.normal)) <= EPS)
+                        brdf_specular = vec3{1.0f, 1.0f, 1.0f};
+                    else
+                        brdf_specular = (fresnel_term * smith_g_func * mic_dis_func) / (4.0f * dot(surface_to_light_vec, rec.normal) * dot(r.direction * -1.0f, rec.normal));
+                    brdf = brdf_specular + hit_shape->mat.diffuse / std::numbers::pi_v<float>;
+                }
+                sum_value += brdf * geom_term;
             }
             color += sum_value * al.area / scene->light_samples * al.color;
         }
@@ -538,7 +561,10 @@ vec3 Renderer::get_pixel_color_ggx(const Ray &r, uint32_t depth, vec3 incoming_t
     if (hit_shape->mat.brdf_type == BRDF_TYPE::Phong)
     {
         reflectivity = hit_shape->mat.specular.x + hit_shape->mat.specular.y + hit_shape->mat.specular.z;
-        reflectivity = reflectivity / (reflectivity + hit_shape->mat.diffuse.x + hit_shape->mat.diffuse.y + hit_shape->mat.diffuse.z);
+        if (reflectivity + hit_shape->mat.diffuse.x + hit_shape->mat.diffuse.y + hit_shape->mat.diffuse.z <= EPS)
+            reflectivity = 1.0f;
+        else
+            reflectivity = reflectivity / (reflectivity + hit_shape->mat.diffuse.x + hit_shape->mat.diffuse.y + hit_shape->mat.diffuse.z);
     }
     else if (hit_shape->mat.brdf_type == BRDF_TYPE::GGX)
     {
@@ -568,21 +594,29 @@ vec3 Renderer::get_pixel_color_ggx(const Ray &r, uint32_t depth, vec3 incoming_t
     vec3 brdf{};
     if (hit_shape->mat.brdf_type == BRDF_TYPE::Phong)
     {
-        brdf = (hit_shape->mat.diffuse / std::numbers::pi + hit_shape->mat.specular * (
+        brdf = hit_shape->mat.diffuse / std::numbers::pi + hit_shape->mat.specular * (
                          hit_shape->mat.shininess + 2) / (2 * std::numbers::pi) * std::pow(
-                         dot(reflected_ray_dir, bounced_ray.direction), hit_shape->mat.shininess));
+                         dot(reflected_ray_dir, bounced_ray.direction), hit_shape->mat.shininess);
     }
     else if (hit_shape->mat.brdf_type == BRDF_TYPE::GGX)
     {
         vec3 half_vector = normalize(bounced_ray.direction - r.direction);
-        float tan_sqrd_h = 1.0f / (std::pow(dot(rec.normal, half_vector), 2)) - 1.0f;
+        float tan_sqrd_h = dot(rec.normal, half_vector) != 0.0f ? 1.0f / (std::pow(dot(rec.normal, half_vector), 2)) - 1.0f : 1000.0f;
         float alpha_sqrd = std::pow(hit_shape->mat.roughness, 2);
-        float mic_dis_func = alpha_sqrd / (std::numbers::pi_v<float> * std::pow(dot(rec.normal, half_vector), 4) * (std::pow(alpha_sqrd + tan_sqrd_h, 2)));
-        float tan_sqrd_wi = 1.0f / std::pow(dot(rec.normal, bounced_ray.direction), 2) - 1.0f;
-        float tan_sqrd_wo = 1.0f / std::pow(dot(rec.normal, r.direction * -1.0f), 2) - 1.0f;
+        float mic_dis_func = 0.0f;
+        if (dot(rec.normal, half_vector) <= EPS || alpha_sqrd + tan_sqrd_h <= EPS)
+            mic_dis_func = 1.0f;
+        else
+            mic_dis_func = alpha_sqrd / (std::numbers::pi_v<float> * std::pow(dot(rec.normal, half_vector), 4) * (std::pow(alpha_sqrd + tan_sqrd_h, 2)));
+        float tan_sqrd_wi = dot(rec.normal, bounced_ray.direction) != 0 ? 1.0f / std::pow(dot(rec.normal, bounced_ray.direction), 2) - 1.0f : 1000.0f;
+        float tan_sqrd_wo = dot(rec.normal, r.direction * -1.0f) != 0 ? 1.0f / std::pow(dot(rec.normal, r.direction * -1.0f), 2) - 1.0f : 1000.0f;
         float smith_g_func = (2.0f / (1.0f + std::sqrt(1.0f + alpha_sqrd * tan_sqrd_wi))) * (2.0f / (1.0f + std::sqrt(1.0f + alpha_sqrd * tan_sqrd_wo)));
         vec3 fresnel_term = hit_shape->mat.specular + (vec3{1.0f, 1.0f, 1.0f} - hit_shape->mat.specular) * std::pow(1 - dot(bounced_ray.direction, half_vector), 5);
-        vec3 brdf_specular = (fresnel_term * smith_g_func * mic_dis_func) / (4.0f * dot(bounced_ray.direction, rec.normal) * dot(r.direction * -1.0f, rec.normal));
+        vec3 brdf_specular{};
+        if (std::abs(dot(r.direction * -1.0f, rec.normal)) <= EPS || std::abs(dot(bounced_ray.direction, rec.normal)) <= EPS)
+            brdf_specular = vec3{1.0f, 1.0f, 1.0f};
+        else
+            brdf_specular = (fresnel_term * smith_g_func * mic_dis_func) / (4.0f * dot(bounced_ray.direction, rec.normal) * dot(r.direction * -1.0f, rec.normal));
         brdf = brdf_specular + hit_shape->mat.diffuse / std::numbers::pi_v<float>;
     }
     vec3 throughput{};
@@ -606,7 +640,7 @@ vec3 Renderer::get_pixel_color_ggx(const Ray &r, uint32_t depth, vec3 incoming_t
         else if (hit_shape->mat.brdf_type == BRDF_TYPE::GGX)
         {
             vec3 half_vector = normalize(r.direction * -1 + bounced_ray.direction);
-            float tan_sqrd_h = 1.0f / (std::pow(dot(rec.normal, half_vector), 2)) - 1.0f;
+            float tan_sqrd_h = dot(rec.normal, half_vector) != 0 ? 1.0f / (std::pow(dot(rec.normal, half_vector), 2)) - 1.0f : 1000.0f;
             float alpha_sqrd = std::pow(hit_shape->mat.roughness, 2);
             float mic_dis_func = alpha_sqrd / (std::numbers::pi_v<float> * std::pow(dot(rec.normal, half_vector), 4) * (std::pow(alpha_sqrd + tan_sqrd_h, 2)));
 

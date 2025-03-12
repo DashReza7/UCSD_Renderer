@@ -10,6 +10,7 @@ output ggx.png
 
 maxdepth -1
 
+parallel_run true
 
 maxverts 8
 

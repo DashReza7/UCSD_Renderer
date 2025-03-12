@@ -23,12 +23,16 @@ public:
     Material() = default;
     Material(const BRDF_TYPE brdf_type, const vec3& diffuse, const vec3& specular, float shininess, const vec3& ambient, const vec3& emission, const float roughness) :
              brdf_type(brdf_type), diffuse(diffuse), specular(specular), shininess(shininess), ambient(ambient), emission(emission), roughness(roughness) {}
+
+    float get_reflectivity();
 };
 
 class Shape : public Hittable
 {
 public:
     Material mat;
+
+
 };
 
 class Sphere : public Shape

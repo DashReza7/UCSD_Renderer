@@ -115,3 +115,27 @@ void Triangle::set_bbox()
     tmp_bbox.expand(0.01f);
     bbox = tmp_bbox;
 }
+
+float Material::get_reflectivity()
+{
+    float reflectivity = 0.0f;
+    if (this->brdf_type == BRDF_TYPE::Phong)
+    {
+        reflectivity = this->specular.x + this->specular.y + this->specular.z;
+        if (reflectivity + this->diffuse.x + this->diffuse.y + this->diffuse.z <= EPS)
+            reflectivity = 1.0f;
+        else
+            reflectivity = reflectivity / (reflectivity + this->diffuse.x + this->diffuse.y + this->diffuse.z);
+    }
+    else if (this->brdf_type == BRDF_TYPE::GGX)
+    {
+        float numerator = this->specular.x + this->specular.y + this->specular.z;
+        float denom = numerator + this->diffuse.x + this->diffuse.y + this->diffuse.z;
+        if (denom < EPS)
+            reflectivity = 1.0f;
+        else
+            reflectivity = std::max(0.25f, numerator / denom);
+    }
+
+    return reflectivity;
+}

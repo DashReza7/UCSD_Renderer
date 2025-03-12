@@ -35,6 +35,8 @@ private:
 
     void render_sequential();
 
+    vec3 get_brdf(const Shape *shape, const vec3 &w_o, const vec3 &w_i, const HitRecord &rec);
+
 public:
     Renderer(Scene *s, Film *f)
     {

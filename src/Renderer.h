@@ -26,8 +26,6 @@ private:
     // Path-tracer
     vec3 get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 incoming_throughput = vec3{1.0f, 1.0f, 1.0f});
 
-    vec3 get_pixel_color_ggx(const Ray &r, uint32_t depth, vec3 incoming_throughput = vec3{1.0f, 1.0f, 1.0f});
-
     // handle which Integrator to use
     vec3 get_pixel_color(const Ray &r, uint32_t depth);
 
@@ -35,7 +33,13 @@ private:
 
     void render_sequential();
 
-    vec3 get_brdf(const Shape *shape, const vec3 &w_o, const vec3 &w_i, const HitRecord &rec);
+    vec3 get_brdf(const Shape *shape, const vec3 &w_o, const vec3 &w_i, const vec3 &normal);
+
+    // vec3 get_bounced_ray_dirn() const;
+
+    float get_pdf(ImportanceSamplingType importance_sampling_type, const vec3 &normal, const vec3 &w_i, const vec3 &w_o, const Shape *hit_shape) const;
+
+    vec3 sample_dirn(bool sample_specular, const Shape *hit_shape, const vec3 &w_o, const vec3 &normal);
 
 public:
     Renderer(Scene *s, Film *f)

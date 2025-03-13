@@ -408,7 +408,7 @@ vec3 reflect(const vec3& dir, const vec3& normal);
 
 bool point_in_triangle(vec3 p, vec3 v1, vec3 v2, vec3 v3);
 
-vec3 get_random_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis);
+vec3 get_uniform_hemisphere_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis);
 
 vec3 get_cosine_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis);
 
@@ -419,3 +419,5 @@ vec3 get_brdf_unit_vector(std::mt19937 &generator, std::uniform_real_distributio
 vec3 get_brdf_unit_ggx(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, bool specular_brdf, float roughness, const vec3 &wo);
 
 vec3 align_vector(const vec3 &vector, const vec3 &center);
+
+inline float max_vec(const vec3 &v);

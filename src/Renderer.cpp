@@ -491,14 +491,52 @@ vec3 Renderer::sample_dirn(bool sample_specular,
                            const vec3 &normal)
 {
     vec3 bounced_ray_dirn{};
-    if (hit_shape->mat.brdf_type == BRDF_TYPE::Phong)
+    if (scene->importance_sampling_type == ImportanceSamplingType::UNIFORM_HEMISPHERE)
     {
-        vec3 center_vec = (scene->importance_sampling_type == ImportanceSamplingType::BRDF && sample_specular) ? reflect(w_o, normal) : normal;
-        bounced_ray_dirn = get_vector_around_normal(gen, uniform_dis, center_vec, scene->importance_sampling_type, sample_specular, hit_shape->mat.shininess);
+        // in the range [0, pi]
+        //float phi = std::numbers::pi * uniform_dis(generator);
+        float phi = std::acos(uniform_dis(gen));
+        // in the range [0, 2*pi]
+        float theta = 2.0f * std::numbers::pi * uniform_dis(gen);
+        bounced_ray_dirn = align_vector(vec3{std::sin(phi) * std::cos(theta), std::sin(phi) * std::sin(theta), std::abs(std::cos(phi))}, normal);
     }
-    else if (hit_shape->mat.brdf_type == BRDF_TYPE::GGX)
+    else if (scene->importance_sampling_type == ImportanceSamplingType::COSINE)
     {
-        bounced_ray_dirn = get_brdf_unit_ggx(gen, uniform_dis, normal, sample_specular, hit_shape->mat.roughness, w_o);
+        float phi = 2 * std::numbers::pi * uniform_dis(gen);
+        float theta = std::acos(std::sqrt(uniform_dis(gen)));
+        bounced_ray_dirn = align_vector(vec3{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::abs(std::cos(theta))}, normal);
+    }
+    else if (scene->importance_sampling_type == ImportanceSamplingType::BRDF)
+    {
+        if (hit_shape->mat.brdf_type == BRDF_TYPE::Phong)
+        {
+            float phi = 2.0f * std::numbers::pi * uniform_dis(gen);
+            float theta = sample_specular ? std::acos(std::pow(uniform_dis(gen), 1.0f / (hit_shape->mat.shininess + 1.0f))) : std::acos(std::sqrt(uniform_dis(gen)));
+            vec3 tmp_dirn = vec3{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
+            if (!sample_specular || tmp_dirn.z >= 0.0f)
+                bounced_ray_dirn = sample_specular ? align_vector(tmp_dirn, reflect(w_o, normal)) : align_vector(tmp_dirn, normal);
+        }
+        else if (hit_shape->mat.brdf_type == BRDF_TYPE::GGX)
+        {
+            if (sample_specular)
+            {
+                float phi = 2.0f * std::numbers::pi_v<float> * uniform_dis(gen);
+                float rnd = uniform_dis(gen);
+                float theta = std::atan(hit_shape->mat.roughness * std::sqrt(rnd) / std::sqrt(1.0f - rnd));
+                vec3 h{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
+                vec3 h_rotated = align_vector(h, normal);
+                vec3 wi = reflect(w_o, h_rotated);
+                if (dot(wi, normal) >= 0.0f)
+                    bounced_ray_dirn = wi;
+            }
+            else
+            {
+                float phi = 2 * std::numbers::pi_v<float> * uniform_dis(gen);
+                float theta = std::acos(std::sqrt(uniform_dis(gen)));
+                vec3 sample{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
+                bounced_ray_dirn = align_vector(sample, normal);
+            }
+        }
     }
 
     return bounced_ray_dirn;

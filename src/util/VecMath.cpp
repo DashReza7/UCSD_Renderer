@@ -1,5 +1,7 @@
 #include <corecrt_math_defines.h>
+#include <numbers>
 #include "VecMath.h"
+
 
 vec3::vec3(const vec4 &v)
 {
@@ -142,45 +144,6 @@ bool point_in_triangle(vec3 p, vec3 v1, vec3 v2, vec3 v3)
            dot(n, cross(v1 - v3, p - v3)) >= 0.0f;
 }
 
-vec3 get_uniform_hemisphere_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis)
-{
-    // in the range [0, pi]
-    //    float phi = std::numbers::pi * uniform_dis(generator);
-    float phi = std::acos(uniform_dis(generator));
-    // in the range [0, 2*pi]
-    float theta = 2.0f * std::numbers::pi * uniform_dis(generator);
-
-    return vec3{std::sin(phi) * std::cos(theta), std::sin(phi) * std::sin(theta), std::cos(phi)};
-}
-
-vec3 get_cosine_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis)
-{
-    float phi = 2 * std::numbers::pi * uniform_dis(generator);
-    float theta = std::acos(std::sqrt(uniform_dis(generator)));
-    return normalize(vec3{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)});
-}
-
-vec3 get_brdf_unit_vector(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, bool specular_brdf, float shininess)
-{
-    float phi = 2.0f * std::numbers::pi * uniform_dis(generator);
-    float theta = specular_brdf ? std::acos(std::pow(uniform_dis(generator), 1.0f / (shininess + 1.0f))) : std::acos(std::sqrt(uniform_dis(generator)));
-    return normalize(vec3{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)});
-}
-
-vec3 get_vector_around_normal(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, ImportanceSamplingType type, bool specular_brdf, float shininess)
-{
-    vec3 rnd_vec = type == ImportanceSamplingType::UNIFORM_HEMISPHERE
-                       ? get_uniform_hemisphere_unit_vector(generator, uniform_dis)
-                       : type == ImportanceSamplingType::COSINE
-                             ? get_cosine_unit_vector(generator, uniform_dis)
-                             : get_brdf_unit_vector(generator, uniform_dis, specular_brdf, shininess);
-    if (type == ImportanceSamplingType::BRDF && rnd_vec.z < 0.0f)
-        return vec3{};
-    rnd_vec.z = std::abs(rnd_vec.z);
-
-    return align_vector(rnd_vec, normal);
-}
-
 vec3 align_vector(const vec3 &vector, const vec3 &center)
 {
     vec3 r = normalize(center);
@@ -197,30 +160,10 @@ vec3 align_vector(const vec3 &vector, const vec3 &center)
     return normalize(s * vector.x + t * vector.y + r * vector.z);
 }
 
-vec3 get_brdf_unit_ggx(std::mt19937 &generator, std::uniform_real_distribution<float> &uniform_dis, const vec3 &normal, bool specular_brdf, float roughness, const vec3 &wo)
-{
-    if (specular_brdf)
-    {
-        float phi = 2.0f * std::numbers::pi_v<float> * uniform_dis(generator);
-        float rnd = uniform_dis(generator);
-        float theta = std::atan(roughness * std::sqrt(rnd) / std::sqrt(1.0f - rnd));
-        vec3 h{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
-        vec3 h_rotated = align_vector(h, normal);
-        vec3 wi = reflect(wo, h_rotated);
-        if (dot(wi, normal) < 0.0f)
-            return vec3{};
-        return wi;
-    }
-    else
-    {
-        float phi = 2 * std::numbers::pi_v<float> * uniform_dis(generator);
-        float theta = std::acos(std::sqrt(uniform_dis(generator)));
-        vec3 sample{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
-        return align_vector(sample, normal);
-    }
-}
-
-inline float max_vec(const vec3 &v)
+float max_vec(const vec3 &v)
 {
     return std::max(v.x, std::max(v.y, v.z));
 }
+
+
+

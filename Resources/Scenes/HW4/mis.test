@@ -13,8 +13,7 @@ output mis.png
 
 maxdepth 1
 
-
-maxverts 28
+maxverts 32
 
 vertex -10 -4.14615 -10
 vertex -10 -4.14615 10

@@ -18,13 +18,13 @@ void run(int argc, char *argv[])
         const char *input_filename = argv[i];
         std::string output_filename;
         main_scene.parse_scene_file(input_filename, output_filename);
-        
+
         main_scene.init();
         
         Film film{main_scene.width, main_scene.height, main_scene.gamma};
         
         Renderer renderer{&main_scene, &film};
-        
+
         std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
         renderer.render();
         std::chrono::steady_clock::time_point finish_time = std::chrono::steady_clock::now();

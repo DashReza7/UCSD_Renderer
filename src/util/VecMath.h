@@ -160,6 +160,11 @@ public:
     {
         return std::format("({}, {}, {})", x, y, z);
     }
+
+    bool is_exactly_zero()
+    {
+        return x == 0.0f && y == 0.0f && z == 0.0f;
+    }
     
     void clamp(float min, float max)
     {

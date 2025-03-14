@@ -265,9 +265,11 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
         else if (command == "nexteventestimation")
         {
             if (tokens[1] == "on")
-                this->next_event_estimation = true;
+                this->nee_type = NextEventEstimationType::ON;
             else if (tokens[1] == "off")
-                this->next_event_estimation = false;
+                this->nee_type = NextEventEstimationType::OFF;
+            else if (tokens[1] == "mis")
+                this->nee_type = NextEventEstimationType::MIS;
         }
         else if (command == "russianroulette")
         {
@@ -308,7 +310,10 @@ void Scene::parse_scene_file(const char *input_filename, std::string &output_fil
             roughness = std::stof(tokens[1]);
         }
         else
+        {
+            std::cout << "Error: Unknown command: " << line << std::endl;
             throw std::runtime_error(std::format("Invalid command: {}", command));
+        }
     }
 
     file.close();

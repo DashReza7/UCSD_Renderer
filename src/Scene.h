@@ -11,6 +11,13 @@
 const float T_MIN = 0.001f;
 const float T_MAX = 1000.0f;
 
+enum class NextEventEstimationType
+{
+    OFF,
+    ON,
+    MIS
+};
+
 class Scene
 {
 public:
@@ -29,7 +36,7 @@ public:
     uint32_t light_samples = 1;
     bool light_stratify = false;
     uint32_t spp = 1;
-    bool next_event_estimation = false;
+    NextEventEstimationType nee_type = NextEventEstimationType::OFF;
     bool russian_roulette = false;
     bool parallel_run = false;
     ImportanceSamplingType importance_sampling_type = ImportanceSamplingType::UNIFORM_HEMISPHERE;

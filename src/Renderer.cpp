@@ -298,11 +298,11 @@ vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 inco
     AreaLight *hitted_area_light = hit_area_light(r, tmp_vec);
     if (hitted_area_light != nullptr)
     {
-        if (dot(hitted_area_light->normal, r.direction * -1.0f) <= 0.0f)
-            return vec3{};
+        // if (dot(hitted_area_light->normal, r.direction * -1.0f) >= 0.0f)
+        //     return vec3{};
 
-        if (depth == scene->maxdepth)
-            return vec3{};
+        // if (depth == scene->maxdepth)
+            // return vec3{};
 
         // return the light color, if either no NEE, or the ray is in its first iteration (in other iterations, direct light has already been taken into account)
         if (scene->nee_type == NextEventEstimationType::OFF || depth == scene->maxdepth)

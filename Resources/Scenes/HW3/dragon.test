@@ -13,7 +13,7 @@ quadLight  -5 20 15  0 -5 5  10 0 0  18 18 16
 
 maxdepth 5
 
-#parallel_run true
+parallel_run true
 
 maxverts 50005
 

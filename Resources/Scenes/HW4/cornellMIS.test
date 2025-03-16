@@ -10,6 +10,7 @@ output cornellMIS.png
 
 maxdepth -1
 
+parallel_run true
 
 maxverts 4
 #planar face

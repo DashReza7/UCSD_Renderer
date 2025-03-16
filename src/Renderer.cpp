@@ -36,6 +36,9 @@ void Renderer::render_sequential()
     {
         for (uint32_t j = 0; j < scene->width; ++j)
         {
+            // if (i != 240 || j != 240)
+            //     continue;
+
             vec3 pixel_color = vec3{};
             for (int k = 0; k < scene->spp; ++k)
             {
@@ -111,7 +114,7 @@ vec3 Renderer::get_pixel_color_raytrace(const Ray &r, uint32_t depth) const
             tmp_color += hit_shape->mat.diffuse * fmax(0.0f, dot(rec.normal, scene->dirn_light.dirn_to_light));
             vec3 half_dirn = normalize(scene->dirn_light.dirn_to_light - r.direction);
             tmp_color +=
-                    hit_shape->mat.specular * pow(fmax(0.0f, dot(half_dirn, rec.normal)), hit_shape->mat.shininess);
+                    hit_shape->mat.specular * std::powf(fmax(0.0f, dot(half_dirn, rec.normal)), hit_shape->mat.shininess);
 
             color += tmp_color * scene->dirn_light.color;
         }
@@ -131,7 +134,7 @@ vec3 Renderer::get_pixel_color_raytrace(const Ray &r, uint32_t depth) const
 
         vec3 half_dirn = normalize(light_dirn - r.direction);
         vec3 specular_color =
-                hit_shape->mat.specular * pow(fmax(0.0f, dot(half_dirn, rec.normal)), hit_shape->mat.shininess);
+                hit_shape->mat.specular * std::powf(fmax(0.0f, dot(half_dirn, rec.normal)), hit_shape->mat.shininess);
 
         color += (diffuse_color + specular_color) * pt_light.color * pt_light.calc_attenuation(rec.hit_pos);
     }
@@ -271,7 +274,7 @@ vec3 Renderer::get_pixel_color_direct(const Ray &r)
                     continue;
                 sum_value += (hit_shape->mat.diffuse / std::numbers::pi +
                               hit_shape->mat.specular / (2 * std::numbers::pi) * (hit_shape->mat.shininess + 2) *
-                              std::pow(dot(reflected_ray_dir, surface_to_light_vec), hit_shape->mat.shininess)) *
+                              std::powf(dot(reflected_ray_dir, surface_to_light_vec), hit_shape->mat.shininess)) *
                         geom_term;
             }
             color += sum_value * al.area / scene->light_samples * al.color;
@@ -295,11 +298,14 @@ vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 inco
     AreaLight *hitted_area_light = hit_area_light(r, tmp_vec);
     if (hitted_area_light != nullptr)
     {
-        // if (depth == scene->maxdepth)
-        //     return vec3{};
+        if (dot(hitted_area_light->normal, r.direction * -1.0f) <= 0.0f)
+            return vec3{};
+
+        if (depth == scene->maxdepth)
+            return vec3{};
 
         // return the light color, if either no NEE, or the ray is in its first iteration (in other iterations, direct light has already been taken into account)
-        if (scene->nee_type != NextEventEstimationType::ON || depth == scene->maxdepth)
+        if (scene->nee_type == NextEventEstimationType::OFF || depth == scene->maxdepth)
             return hitted_area_light->color;
         return vec3{};
     }
@@ -349,6 +355,10 @@ vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 inco
                 HitRecord foo_rec;
                 Ray shadow_ray{rec.hit_pos + rec.normal * EPS, bounced_ray_dirn};
                 bool is_foo_hit = hit(shadow_ray, T_MIN, T_MAX, foo_rec);
+                vec3 tmp_light_hit_pos{};
+                AreaLight *hitted_area_light = hit_area_light(Ray{rec.hit_pos + rec.normal * EPS, bounced_ray_dirn}, tmp_light_hit_pos);
+                if (&al != hitted_area_light || dot(hitted_area_light->normal, bounced_ray_dirn * -1.0f) >= 0.0f)
+                    continue;
                 if (is_foo_hit && foo_rec.t < light_dist) // if the area_light is in shadow, ignore this area_light source
                     continue;
 
@@ -366,22 +376,27 @@ vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 inco
         vec3 sum_value{};
 
         // BRDF sample
-        vec3 sample_dirn_brdf = get_sample_dirn(ImportanceSamplingType::BRDF, uniform_dis(gen) < hit_shape->mat.get_reflectivity(), hit_shape, r.direction * -1.0f, rec.normal);
-        vec3 tmp_vec{};
-        AreaLight *hitted_area_light = hit_area_light(Ray{rec.hit_pos + rec.normal * EPS, sample_dirn_brdf}, tmp_vec);
-        if (hitted_area_light != nullptr && false)
+        if (true)
         {
-            vec3 brdf = sample_dirn_brdf.is_exactly_zero() ? vec3{} : get_brdf(hit_shape, r.direction * -1.0f, sample_dirn_brdf, rec.normal);
-            float pdf_brdf = sample_dirn_brdf.is_exactly_zero() ? 1.0f : get_pdf(ImportanceSamplingType::BRDF, rec.normal, sample_dirn_brdf, r.direction * -1.0f, hit_shape);
-            float weight = std::pow(pdf_brdf, 2) / (std::pow(pdf_brdf, 2) + std::pow(get_pdf_nee(sample_dirn_brdf, rec, is_hit), 2));
-            sum_value += brdf / pdf_brdf * weight * dot(rec.normal, sample_dirn_brdf) * hitted_area_light->color;
+            vec3 sample_dirn_brdf = get_sample_dirn(ImportanceSamplingType::BRDF, uniform_dis(gen) < hit_shape->mat.get_reflectivity(), hit_shape, r.direction * -1.0f, rec.normal);
+            vec3 light_hit_pos{};
+            AreaLight *hitted_area_light = hit_area_light(Ray{rec.hit_pos + rec.normal * EPS, sample_dirn_brdf}, light_hit_pos);
+            if (hitted_area_light != nullptr && dot(sample_dirn_brdf, hitted_area_light->normal) >= 0.0f)
+            {
+                vec3 brdf = sample_dirn_brdf.is_exactly_zero() ? vec3{} : get_brdf(hit_shape, r.direction * -1.0f, sample_dirn_brdf, rec.normal);
+                float pdf_brdf = sample_dirn_brdf.is_exactly_zero() ? 1.0f : get_pdf(ImportanceSamplingType::BRDF, rec.normal, sample_dirn_brdf, r.direction * -1.0f, hit_shape);
+                float weight = std::powf(pdf_brdf, 2) / (std::powf(pdf_brdf, 2) + std::powf(get_pdf_nee(sample_dirn_brdf, rec, is_hit), 2));
+                // float cos_theta_i = std::clamp(dot(rec.normal, sample_dirn_brdf), 0.0f, 1.0f);
+                // float cos_theta_o= std::clamp(dot(hitted_area_light->normal, sample_dirn_brdf), 0.0f, 1.0f);
+                // float geom_term = cos_theta_i * cos_theta_o / dot(rec.hit_pos - light_hit_pos, rec.hit_pos - light_hit_pos);
+                // sum_value += brdf / pdf_brdf * weight * geom_term * hitted_area_light->color;
+                sum_value += brdf / pdf_brdf * weight * hitted_area_light->color * dot(rec.normal, sample_dirn_brdf);
+            }
         }
-
         // NEE sample for each area light
-        for (AreaLight al: scene->areaLights)
+        if (true)
+        for (const AreaLight &al: scene->areaLights)
         {
-            // break;
-
             vec3 rnd_light_point{al.a + (al.b - al.a) * uniform_dis(gen) + (al.c - al.a) * uniform_dis(gen)};
             // surface_to_light_vec
             vec3 bounced_ray_dirn = rnd_light_point - rec.hit_pos;
@@ -391,13 +406,22 @@ vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 inco
             HitRecord foo_rec;
             Ray shadow_ray{rec.hit_pos + rec.normal * EPS, bounced_ray_dirn};
             bool is_foo_hit = hit(shadow_ray, T_MIN, T_MAX, foo_rec);
+            vec3 tmp_hit_light_pos{};
+            AreaLight *hitted_area_light = hit_area_light(Ray{rec.hit_pos + rec.normal * EPS, bounced_ray_dirn}, tmp_hit_light_pos);
+            if (hitted_area_light != &al || dot(hitted_area_light->normal, bounced_ray_dirn * -1.0f) >= 0.0f)
+                continue;
             if (!is_foo_hit || foo_rec.t >= light_dist) // if the area_light is in shadow, ignore this area_light source
             {
                 vec3 brdf = get_brdf(hit_shape, r.direction * -1.0f, bounced_ray_dirn, rec.normal);
                 float pdf_nee = (light_dist * light_dist / (al.area * std::abs(dot(al.normal, bounced_ray_dirn)))) / scene->areaLights.size();
                 float pdf_brdf = get_pdf(ImportanceSamplingType::BRDF, rec.normal, bounced_ray_dirn, r.direction * -1.0f, hit_shape);
-                float weight = std::pow(pdf_nee, 2) / (std::pow(pdf_nee, 2) + std::pow(pdf_brdf, 2));
+                float weight = std::powf(pdf_nee, 2) / (std::powf(pdf_nee, 2) + std::powf(pdf_brdf, 2));
                 sum_value += brdf / pdf_nee * dot(rec.normal, bounced_ray_dirn) * weight * al.color / scene->areaLights.size();
+
+                // float cos_theta_i = std::clamp(dot(rec.normal, bounced_ray_dirn), 0.0f, 1.0f);
+                // float cos_theta_o= std::clamp(dot(al.normal, bounced_ray_dirn), 0.0f, 1.0f);
+                // float geom_term = cos_theta_i * cos_theta_o / dot(rec.hit_pos - light_hit_pos, rec.hit_pos - light_hit_pos);
+                // sum_value += brdf / pdf_nee * weight * al.color / scene->areaLights.size() * geom_term;
             }
         }
 
@@ -405,20 +429,16 @@ vec3 Renderer::get_pixel_color_pathtrace(const Ray &r, uint32_t depth, vec3 inco
     }
 
     // indirect light
-    Ray bounced_ray{
-        rec.hit_pos + rec.normal * EPS,
-        get_sample_dirn(scene->importance_sampling_type, uniform_dis(gen) <= hit_shape->mat.get_reflectivity(), hit_shape, r.direction * -1.0f, rec.normal)
-    };
+    Ray bounced_ray{rec.hit_pos + rec.normal * EPS, get_sample_dirn(scene->importance_sampling_type, uniform_dis(gen) <= hit_shape->mat.get_reflectivity(), hit_shape, r.direction * -1.0f, rec.normal)};
     if (bounced_ray.direction == vec3{}) // if bounced_ray.direction is all zero, it means this new ray should have no contribution
         return color;
-
     vec3 brdf = get_brdf(hit_shape, r.direction * -1.0f, bounced_ray.direction, rec.normal);
     float pdf = get_pdf(scene->importance_sampling_type, rec.normal, bounced_ray.direction, r.direction * -1.0f, hit_shape);
     vec3 throughput = brdf / pdf * dot(rec.normal, bounced_ray.direction);
-    float termination_prob = scene->russian_roulette ? 1.0f - std::min(1.0f, max_vec(incoming_throughput * throughput)) : 0.0f;
+    float termination_prob = !scene->russian_roulette ? 0.0f : 1.0f - std::min(1.0f, max_vec(incoming_throughput * throughput));
     if (!scene->russian_roulette || uniform_dis(gen) > termination_prob)
     {
-        vec3 traced_color = get_pixel_color_pathtrace(bounced_ray, depth - 1, incoming_throughput * throughput / (1 - termination_prob));
+        vec3 traced_color = get_pixel_color_pathtrace(bounced_ray, depth - 1, incoming_throughput * throughput / (1.0f - termination_prob));
         color += traced_color * throughput / (1 - termination_prob);
     }
 
@@ -439,35 +459,34 @@ vec3 Renderer::get_pixel_color(const Ray &r, uint32_t depth)
     return vec3{};
 }
 
-vec3 Renderer::get_brdf(const Shape *shape, const vec3 &w_o, const vec3 &w_i, const vec3 &normal)
+vec3 Renderer::get_brdf(const Shape *shape, const vec3 &w_o, const vec3 &w_i, const vec3 &normal) const
 {
     vec3 brdf{};
     if (shape->mat.brdf_type == BRDF_TYPE::Phong)
     {
         vec3 mirror_reflected_wo = reflect(w_o, normal);
-        brdf = shape->mat.diffuse / std::numbers::pi + shape->mat.specular / (2 * std::numbers::pi) * (shape->mat.shininess + 2) * std::pow(dot(mirror_reflected_wo, w_i), shape->mat.shininess);
+        brdf = shape->mat.diffuse / std::numbers::pi + shape->mat.specular / (2 * std::numbers::pi) * (shape->mat.shininess + 2) * std::powf(dot(mirror_reflected_wo, w_i), shape->mat.shininess);
     }
     else if (shape->mat.brdf_type == BRDF_TYPE::GGX)
     {
+        if (dot(w_i, normal) <= 0.0f || dot(w_o, normal) <= 0.0f)
+            return vec3{};
+
         vec3 half_vector = normalize(w_i + w_o);
-        float tan_sqrd_h = dot(normal, half_vector) != 0.0f ? 1.0f / (std::pow(dot(normal, half_vector), 2)) - 1.0f : 1.0f;
-        // float theta_h = std::acos(dot(half_vector, normal));
-        // float tan_sqrd_h = std::pow(std::tan(theta_h), 2);
-        float alpha_sqrd = std::pow(shape->mat.roughness, 2);
-        float mic_dis_func = 0.0f;
-        // if (dot(normal, half_vector) <= EPS || alpha_sqrd + tan_sqrd_h <= EPS)
-        //     mic_dis_func = 1.0f;
-        // else
-            mic_dis_func = alpha_sqrd / (std::numbers::pi_v<float> * std::pow(dot(normal, half_vector), 4) * (std::pow(alpha_sqrd + tan_sqrd_h, 2)));
-        float tan_sqrd_wi = dot(normal, w_i) != 0 ? 1.0f / std::pow(dot(normal, w_i), 2) - 1.0f : 1.0f;
-        float tan_sqrd_wo = dot(normal, w_o) != 0 ? 1.0f / std::pow(dot(normal, w_o), 2) - 1.0f : 1.0f;
+        // float tan_sqrd_h = is_almost_zero(dot(normal, half_vector)) ? std::numeric_limits<float>::infinity() : 1.0f / (std::powf(dot(normal, half_vector), 2)) - 1.0f;
+        float cos_sqrd_h = dot(normal, half_vector) * dot(normal, half_vector);
+        float alpha_sqrd = std::powf(shape->mat.roughness, 2);
+        // float mic_dis_func = alpha_sqrd / (std::numbers::pi_v<float> * std::powf(dot(normal, half_vector), 4) * (std::powf(alpha_sqrd + tan_sqrd_h, 2)));
+        float mic_dis_func = alpha_sqrd / (std::numbers::pi_v<float> * (alpha_sqrd * alpha_sqrd * cos_sqrd_h * cos_sqrd_h + (1.0f - cos_sqrd_h) * (1.0f - cos_sqrd_h) + 2.0f * alpha_sqrd * cos_sqrd_h * (1.0f - cos_sqrd_h)));
+        float tan_sqrd_wi = is_almost_zero(dot(normal, w_i)) ? std::numeric_limits<float>::infinity() : 1.0f / std::powf(dot(normal, w_i), 2) - 1.0f;
+        float tan_sqrd_wo = is_almost_zero(dot(normal, w_o)) ? std::numeric_limits<float>::infinity() : 1.0f / std::powf(dot(normal, w_o), 2) - 1.0f;
         float smith_g_func = (2.0f / (1.0f + std::sqrt(1.0f + alpha_sqrd * tan_sqrd_wi))) * (2.0f / (1.0f + std::sqrt(1.0f + alpha_sqrd * tan_sqrd_wo)));
-        vec3 fresnel_term = shape->mat.specular + (vec3{1.0f, 1.0f, 1.0f} - shape->mat.specular) * std::pow(1 - dot(w_i, half_vector), 5);
+        vec3 fresnel_term = shape->mat.specular + (vec3{1.0f, 1.0f, 1.0f} - shape->mat.specular) * std::powf(1 - dot(w_i, half_vector), 5);
         vec3 brdf_specular{};
         // if (std::abs(dot(w_o, normal)) <= EPS || std::abs(dot(w_i, normal)) <= EPS)
         //     brdf_specular = vec3{1.0f, 1.0f, 1.0f};
         // else
-            brdf_specular = (fresnel_term * smith_g_func * mic_dis_func) / (4.0f * dot(w_i, normal) * dot(w_o, normal));
+            brdf_specular = fresnel_term * smith_g_func * mic_dis_func / (4.0f * dot(w_i, normal) * dot(w_o, normal));
         brdf = brdf_specular + shape->mat.diffuse / std::numbers::pi_v<float>;
     }
 
@@ -492,15 +511,15 @@ float Renderer::get_pdf(ImportanceSamplingType sampling_type, const vec3 &normal
 
         if (hit_shape->mat.brdf_type == BRDF_TYPE::Phong)
         {
-            pdf = (1.0f - reflectivity) * dot(normal, w_i) / std::numbers::pi_v<float> + reflectivity * (hit_shape->mat.shininess + 1) / (2.0f * std::numbers::pi_v<float>) * std::pow(dot(w_i, reflect(w_o, normal)), hit_shape->mat.shininess);
+            pdf = (1.0f - reflectivity) * dot(normal, w_i) / std::numbers::pi_v<float> + reflectivity * (hit_shape->mat.shininess + 1) / (2.0f * std::numbers::pi_v<float>) * std::powf(dot(w_i, reflect(w_o, normal)), hit_shape->mat.shininess);
         }
         else if (hit_shape->mat.brdf_type == BRDF_TYPE::GGX)
         {
             vec3 half_vector = normalize(w_o + w_i);
-            float tan_sqrd_h = dot(normal, half_vector) != 0.0f ? 1.0f / (std::pow(dot(normal, half_vector), 2)) - 1.0f : 1.0f;
-            float alpha_sqrd = std::pow(hit_shape->mat.roughness, 2);
-            float mic_dis_func = alpha_sqrd / (std::numbers::pi_v<float> * std::pow(dot(normal, half_vector), 4) * (std::pow(alpha_sqrd + tan_sqrd_h, 2)));
-
+            float cos_sqrd_h = dot(normal, half_vector) * dot(normal, half_vector);
+            float alpha_sqrd = std::powf(hit_shape->mat.roughness, 2);
+            float mic_dis_func = alpha_sqrd / (std::numbers::pi_v<float> * (alpha_sqrd * alpha_sqrd * cos_sqrd_h * cos_sqrd_h + (1.0f - cos_sqrd_h) * (1.0f - cos_sqrd_h) + 2.0f * alpha_sqrd * cos_sqrd_h * (1.0f - cos_sqrd_h)));
+    
             pdf = (1.0f - reflectivity) * dot(normal, w_i) / std::numbers::pi + reflectivity * mic_dis_func * dot(normal, half_vector) / (4.0f * dot(half_vector, w_i));
         }
     }
@@ -530,8 +549,8 @@ vec3 Renderer::get_sample_dirn(ImportanceSamplingType sampling_type, bool sample
     {
         if (hit_shape->mat.brdf_type == BRDF_TYPE::Phong)
         {
-            float phi = 2.0f * std::numbers::pi * uniform_dis(gen);
-            float theta = sample_specular ? std::acos(std::pow(uniform_dis(gen), 1.0f / (hit_shape->mat.shininess + 1.0f))) : std::acos(std::sqrt(uniform_dis(gen)));
+            float phi = 2.0f * std::numbers::pi_v<float> * uniform_dis(gen);
+            float theta = sample_specular ? std::acos(std::powf(uniform_dis(gen), 1.0f / (hit_shape->mat.shininess + 1.0f))) : std::acos(std::sqrtf(uniform_dis(gen)));
             vec3 tmp_dirn = vec3{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
             if (!sample_specular || tmp_dirn.z >= 0.0f)
                 bounced_ray_dirn = sample_specular ? align_vector(tmp_dirn, reflect(w_o, normal)) : align_vector(tmp_dirn, normal);
@@ -542,7 +561,7 @@ vec3 Renderer::get_sample_dirn(ImportanceSamplingType sampling_type, bool sample
             {
                 float phi = 2.0f * std::numbers::pi_v<float> * uniform_dis(gen);
                 float rnd = uniform_dis(gen);
-                float theta = std::atan(hit_shape->mat.roughness * std::sqrt(rnd) / std::sqrt(1.0f - rnd));
+                float theta = std::atan(hit_shape->mat.roughness * std::sqrtf(rnd) / std::sqrtf(1.0f - rnd));
                 vec3 h{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
                 vec3 h_rotated = align_vector(h, normal);
                 vec3 wi = reflect(w_o, h_rotated);
@@ -552,7 +571,7 @@ vec3 Renderer::get_sample_dirn(ImportanceSamplingType sampling_type, bool sample
             else
             {
                 float phi = 2 * std::numbers::pi_v<float> * uniform_dis(gen);
-                float theta = std::acos(std::sqrt(uniform_dis(gen)));
+                float theta = std::acos(std::sqrtf(uniform_dis(gen)));
                 vec3 sample{std::cos(phi) * std::sin(theta), std::sin(phi) * std::sin(theta), std::cos(theta)};
                 bounced_ray_dirn = align_vector(sample, normal);
             }
@@ -566,7 +585,7 @@ float Renderer::get_pdf_nee(const vec3 &w_i, const HitRecord &world_rec, bool is
 {
     vec3 light_hit_pos{};
     AreaLight *hitted_area_light = hit_area_light(Ray{world_rec.hit_pos + world_rec.normal * EPS, w_i}, light_hit_pos);
-    if (hitted_area_light == nullptr)
+    if (hitted_area_light == nullptr || dot(hitted_area_light->normal, w_i * -1.0f) >= 0.0f)
         return 0.0f;
     return (norm2(world_rec.hit_pos - light_hit_pos) / (hitted_area_light->area * std::abs(dot(hitted_area_light->normal, w_i)))) / scene->areaLights.size();
 }
@@ -575,7 +594,7 @@ AreaLight *Renderer::hit_area_light(const Ray &r, vec3 &light_hit_pos) const
 {
     HitRecord world_rec;
     bool is_world_hit = hit(r, T_MIN, T_MAX, world_rec);
-    bool hit_area_light = false;
+    bool is_hit_area_light = false;
     float t_area_light = std::numeric_limits<float>::max();
     AreaLight *hitted_area_light = nullptr;
     for (auto &al: scene->areaLights)
@@ -584,16 +603,14 @@ AreaLight *Renderer::hit_area_light(const Ray &r, vec3 &light_hit_pos) const
         vec3 foo_color;
         if (al.hit(r, foo_rec, foo_color) == true && foo_rec.t < t_area_light)
         {
-            hit_area_light = true;
+            is_hit_area_light = true;
             t_area_light = foo_rec.t;
             hitted_area_light = &al;
         }
     }
 
-    if ((hit_area_light && !is_world_hit) || (hit_area_light && t_area_light < world_rec.t))
-    {
-        light_hit_pos = r.origin + r.direction * t_area_light;
-        return hitted_area_light;
-    }
-    return nullptr;
+    if (!is_hit_area_light || (is_world_hit && t_area_light > world_rec.t))
+        return nullptr;
+    light_hit_pos = r.origin + r.direction * t_area_light;
+    return hitted_area_light;
 }

@@ -6,6 +6,8 @@ nexteventestimation on
 camera 0 1 3 0 1 0 0 1 0 45
 output cornellNEE.png
 
+parallel_run true
+
 maxdepth 5
 
 maxverts 12

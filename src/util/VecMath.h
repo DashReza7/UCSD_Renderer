@@ -395,7 +395,10 @@ vec2 normalize(const vec2& v);
 vec3 cross(const vec3& v1, const vec3& v2);
 
 float dot(const vec2& v1, const vec2& v2);
-float dot(const vec3& v1, const vec3& v2);
+inline float dot(const vec3& v1, const vec3& v2)
+{
+    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+}
 
 float triangle_area(const vec2& v1, const vec2& v2, const vec2& v3);
 float triangle_area(const vec3& v1, const vec3& v2, const vec3& v3);
@@ -414,4 +417,12 @@ bool point_in_triangle(vec3 p, vec3 v1, vec3 v2, vec3 v3);
 
 vec3 align_vector(const vec3 &vector, const vec3 &center);
 
-float max_vec(const vec3 &v);
+inline float max_vec(const vec3 &v)
+{
+    return std::fmax(v.x, std::max(v.y, v.z));
+}
+
+inline float is_almost_zero(float value, float epsilon = 1e-6f)
+{
+    return std::fabs(value) < epsilon;
+}

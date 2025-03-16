@@ -35,7 +35,7 @@ private:
 
     void render_sequential();
 
-    vec3 get_brdf(const Shape *shape, const vec3 &w_o, const vec3 &w_i, const vec3 &normal);
+    vec3 get_brdf(const Shape *shape, const vec3 &w_o, const vec3 &w_i, const vec3 &normal) const;
 
     float get_pdf(ImportanceSamplingType sampling_type, const vec3 &normal, const vec3 &w_i, const vec3 &w_o, const Shape *hit_shape) const;
 

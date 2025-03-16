@@ -7,6 +7,8 @@ russianroulette on
 camera 0 1 3 0 1 0 0 1 0 45
 output cornellRR.png
 
+parallel_run true
+
 maxdepth -1
 
 maxverts 12

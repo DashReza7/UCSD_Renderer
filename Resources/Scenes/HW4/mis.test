@@ -11,6 +11,8 @@ russianroulette off
 camera  0 2 15  0 -2 2.5  0 1 0  28
 output mis.png
 
+parallel_run false
+
 maxdepth 1
 
 maxverts 32

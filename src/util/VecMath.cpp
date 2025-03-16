@@ -50,11 +50,6 @@ float dot(const vec2 &v1, const vec2 &v2)
     return v1.x * v2.x + v1.y * v2.y;
 }
 
-float dot(const vec3 &v1, const vec3 &v2)
-{
-    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-}
-
 float triangle_area(const vec2 &v1, const vec2 &v2, const vec2 &v3)
 {
     vec2 u1 = v2 - v1;
@@ -159,11 +154,4 @@ vec3 align_vector(const vec3 &vector, const vec3 &center)
 
     return normalize(s * vector.x + t * vector.y + r * vector.z);
 }
-
-float max_vec(const vec3 &v)
-{
-    return std::max(v.x, std::max(v.y, v.z));
-}
-
-
 
